@@ -10,13 +10,14 @@ from app.models.purchase_request import PurchaseRequest
 from app.models.vendor import Vendor
 from app.models.outcome import ProcurementOutcome
 from app.models.schemas import ProcurementOutcomeCreate, ProcurementOutcomeRead
+from app.services.hindsight_service import hindsight_service
 
 router = APIRouter(prefix="/outcomes", tags=["Outcomes"])
 
 
 @router.post("", response_model=ProcurementOutcomeRead, status_code=status.HTTP_201_CREATED)
 def record_procurement_outcome(outcome_in: ProcurementOutcomeCreate, db: Session = Depends(get_db)):
-    """Records actual procurement fulfillment outcome for a completed order."""
+    """Records actual procurement fulfillment outcome for a completed order and retains experience in Hindsight."""
     pr = db.query(PurchaseRequest).filter(PurchaseRequest.id == outcome_in.purchase_request_id).first()
     if not pr:
         raise HTTPException(
@@ -38,6 +39,20 @@ def record_procurement_outcome(outcome_in: ProcurementOutcomeCreate, db: Session
             detail=f"Outcome already recorded for purchase request '{pr.id}'.",
         )
 
+    # Attempt Hindsight retention
+    retained_success = hindsight_service.retain_procurement_outcome(
+        vendor_name=vendor.name,
+        po_id=pr.request_number,
+        category=pr.material_category,
+        outcome_summary=outcome_in.outcome_summary,
+        delay_days=outcome_in.delay_days,
+        defect_rate=outcome_in.defect_rate,
+        delay_reason=outcome_in.delay_reason,
+        vendor_explanation=outcome_in.vendor_explanation,
+        resolution=outcome_in.resolution,
+        additional_cost=outcome_in.additional_cost,
+    )
+
     db_outcome = ProcurementOutcome(
         id=str(uuid.uuid4()),
         purchase_request_id=pr.id,
@@ -52,7 +67,7 @@ def record_procurement_outcome(outcome_in: ProcurementOutcomeCreate, db: Session
         resolution=outcome_in.resolution,
         additional_cost=outcome_in.additional_cost,
         outcome_summary=outcome_in.outcome_summary,
-        is_retained_to_hindsight=False,  # Will be set to True when retained in Phase 2
+        is_retained_to_hindsight=bool(retained_success),
     )
 
     # Update purchase request status to completed
