@@ -19,6 +19,7 @@ class Settings(BaseSettings):
     # Hindsight Settings (for Phase 2+)
     HINDSIGHT_API_KEY: str = ""
     HINDSIGHT_API_URL: str = "https://api.hindsight.vectorize.io"
+    HINDSIGHT_BANK_ID: str = "vendorpulse-procurement"
     HINDSIGHT_MOCK_MODE: bool = True
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
