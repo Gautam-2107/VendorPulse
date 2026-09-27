@@ -1,0 +1,19 @@
+vendor_name,total_orders,delivered_orders,cancelled_orders,pending_orders,partially_delivered_orders,average_delivery_days,average_defect_rate,compliance_failure_rate,total_negotiated_savings,average_negotiated_savings
+Acme Industrial Supplies,90,78,12,0,15,13.35,0.017,0.4,992760.13,11030.67
+Alpha Industrial,23,19,4,0,5,14.58,0.0117,0.3478,156857.27,6819.88
+Apex Components,16,12,4,0,3,15.0,0.0162,0.5625,146643.53,9165.22
+Global Tech Corp,99,82,17,0,12,14.76,0.0148,0.4444,941552.89,9510.64
+Horizon Freight,20,16,4,0,3,14.0,0.017,0.55,177943.27,8897.16
+Matrix Supplies,14,7,7,0,1,14.0,0.0097,0.6429,112531.33,8037.95
+MetalWorks,97,97,0,0,0,10.47,0.0056,0.0,988043.45,10186.01
+Omni Logistics,23,19,4,0,5,14.95,0.0137,0.4783,178027.53,7740.33
+Pinnacle Materials,19,17,2,0,3,15.18,0.0185,0.3684,213062.61,11213.82
+Polymer Tech,20,16,4,0,2,14.12,0.0157,0.4,180808.13,9040.41
+Precision Fasteners,23,21,2,0,3,13.81,0.0146,0.3913,184485.55,8021.11
+PrimeSteel,91,70,21,0,0,14.86,0.0259,0.2308,820909.29,9020.98
+Quantum Electronics,20,16,4,0,4,13.25,0.0101,0.3,255745.2,12787.26
+Sovereign Packaging,27,19,8,0,8,14.16,0.0144,0.4815,215124.18,7967.56
+SteelCore,119,107,12,0,18,14.75,0.0316,0.3445,1092742.45,9182.71
+Titan Metals,26,21,5,0,6,14.19,0.0209,0.6154,270723.32,10412.44
+Vanguard Chemicals,25,19,6,0,4,13.11,0.0153,0.56,239049.55,9561.98
+Zenith Global,25,22,3,0,5,16.27,0.0126,0.32,247500.11,9900.0

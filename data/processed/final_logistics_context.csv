@@ -1,0 +1,37 @@
+material_category,market,region,shipping_mode,total_orders,average_actual_shipping_days,average_scheduled_shipping_days,late_delivery_rate,late_delivery_risk_rate,source,is_vendor_specific
+Structural Steel,LATAM,Western Europe,Standard Class,220,6.6,5.0,0.266,0.393,DataCo,False
+Structural Steel,LATAM,Western Europe,Second Class,596,6.0,4.8,0.312,0.437,DataCo,False
+Structural Steel,Europe,Western Europe,First Class,177,4.8,5.6,0.251,0.343,DataCo,False
+Structural Steel,USCA,Central America,Same Day,513,4.9,4.2,0.257,0.319,DataCo,False
+Raw Metals,LATAM,Southeast Asia,Standard Class,183,6.4,5.3,0.366,0.497,DataCo,False
+Raw Metals,Europe,Southeast Asia,Second Class,189,3.5,3.9,0.166,0.312,DataCo,False
+Raw Metals,USCA,Western Europe,First Class,416,4.5,4.9,0.249,0.386,DataCo,False
+Raw Metals,USCA,Central America,Same Day,365,5.3,4.9,0.362,0.459,DataCo,False
+Electronics,Asia Pacific,North America,Standard Class,416,4.6,2.7,0.347,0.42,DataCo,False
+Electronics,LATAM,Southeast Asia,Second Class,490,6.2,4.8,0.325,0.424,DataCo,False
+Electronics,Asia Pacific,Southeast Asia,First Class,283,4.7,3.0,0.325,0.392,DataCo,False
+Electronics,Europe,Southeast Asia,Same Day,295,5.0,3.5,0.34,0.405,DataCo,False
+Fasteners,Asia Pacific,Western Europe,Standard Class,239,6.4,3.1,0.259,0.327,DataCo,False
+Fasteners,Europe,Western Europe,Second Class,283,4.3,2.6,0.202,0.265,DataCo,False
+Fasteners,LATAM,Western Europe,First Class,225,4.1,5.0,0.293,0.441,DataCo,False
+Fasteners,LATAM,Southeast Asia,Same Day,357,6.0,3.1,0.198,0.34,DataCo,False
+Plastics,Asia Pacific,Western Europe,Standard Class,429,8.2,5.7,0.161,0.308,DataCo,False
+Plastics,LATAM,Central America,Second Class,443,5.6,3.5,0.365,0.513,DataCo,False
+Plastics,Europe,Southeast Asia,First Class,497,4.9,2.9,0.245,0.299,DataCo,False
+Plastics,USCA,Central America,Same Day,317,3.1,4.7,0.177,0.263,DataCo,False
+Packaging,USCA,Western Europe,Standard Class,161,6.2,3.3,0.363,0.441,DataCo,False
+Packaging,USCA,Southeast Asia,Second Class,401,6.7,5.9,0.374,0.463,DataCo,False
+Packaging,LATAM,North America,First Class,339,8.0,3.8,0.158,0.293,DataCo,False
+Packaging,Asia Pacific,Central America,Same Day,437,3.1,3.7,0.2,0.295,DataCo,False
+Machinery Parts,USCA,Western Europe,Standard Class,297,7.0,4.1,0.378,0.508,DataCo,False
+Machinery Parts,Europe,Southeast Asia,Second Class,223,7.0,3.9,0.337,0.447,DataCo,False
+Machinery Parts,Europe,Central America,First Class,452,5.6,5.5,0.377,0.434,DataCo,False
+Machinery Parts,Asia Pacific,North America,Same Day,386,3.0,4.7,0.191,0.258,DataCo,False
+Chemicals,Europe,Western Europe,Standard Class,573,4.0,3.8,0.264,0.318,DataCo,False
+Chemicals,LATAM,Central America,Second Class,228,5.7,5.1,0.178,0.307,DataCo,False
+Chemicals,LATAM,Central America,First Class,297,8.3,5.4,0.243,0.358,DataCo,False
+Chemicals,Asia Pacific,Western Europe,Same Day,291,5.7,4.9,0.184,0.246,DataCo,False
+Logistics Equipment,Asia Pacific,North America,Standard Class,282,6.3,3.8,0.245,0.339,DataCo,False
+Logistics Equipment,Asia Pacific,North America,Second Class,447,5.1,5.1,0.125,0.201,DataCo,False
+Logistics Equipment,USCA,Western Europe,First Class,289,4.8,5.6,0.155,0.221,DataCo,False
+Logistics Equipment,LATAM,Southeast Asia,Same Day,477,6.5,5.8,0.133,0.212,DataCo,False
