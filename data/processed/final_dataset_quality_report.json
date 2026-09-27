@@ -1,0 +1,21 @@
+{
+  "final_row_count": 777,
+  "vendor_count": 18,
+  "material_category_count": 9,
+  "date_range": {
+    "min_order_date": "2023-01-02",
+    "max_order_date": "2024-12-21"
+  },
+  "order_status_distribution": {
+    "Delivered": 561,
+    "Cancelled": 119,
+    "Partially Delivered": 97
+  },
+  "duplicate_po_id_count": 0,
+  "invalid_dates_count": 0,
+  "negative_quantity_count": 0,
+  "negative_price_count": 0,
+  "defective_units_exceed_quantity_count": 0,
+  "dataco_vendor_joins_count": 0,
+  "reproducibility": "100% deterministic with seed 42"
+}

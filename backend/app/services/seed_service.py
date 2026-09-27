@@ -22,12 +22,14 @@ from app.services.data_service import (
 )
 
 
-def seed_database_from_processed_data(db: Session, repo_root: Path = None) -> Dict[str, int]:
+def seed_database_from_processed_data(db: Session, repo_root: Path = None) -> Dict[str, Any]:
     """Seeds database using processed Phase 0 CSVs or dynamically running pipeline."""
     if repo_root is None:
         repo_root = get_repo_root()
 
     processed_dir = repo_root / "data" / "processed"
+    final_history_csv = processed_dir / "final_procurement_dataset.csv"
+    final_vendor_summary_csv = processed_dir / "final_vendor_summary.csv"
     history_csv = processed_dir / "vendor_purchase_history.csv"
     vendor_summary_csv = processed_dir / "vendor_summary.csv"
 
@@ -45,7 +47,10 @@ def seed_database_from_processed_data(db: Session, repo_root: Path = None) -> Di
         }
 
     # Load data
-    if history_csv.exists() and vendor_summary_csv.exists():
+    if final_history_csv.exists() and final_vendor_summary_csv.exists():
+        df_history = pd.read_csv(final_history_csv)
+        df_vendors = pd.read_csv(final_vendor_summary_csv)
+    elif history_csv.exists() and vendor_summary_csv.exists():
         df_history = pd.read_csv(history_csv)
         df_vendors = pd.read_csv(vendor_summary_csv)
     else:
