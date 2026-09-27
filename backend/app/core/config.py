@@ -18,7 +18,7 @@ class Settings(BaseSettings):
 
     # Hindsight Settings (for Phase 2+)
     HINDSIGHT_API_KEY: str = ""
-    HINDSIGHT_API_URL: str = "https://api.hindsight.ai"
+    HINDSIGHT_API_URL: str = "https://api.hindsight.vectorize.io"
     HINDSIGHT_MOCK_MODE: bool = True
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
