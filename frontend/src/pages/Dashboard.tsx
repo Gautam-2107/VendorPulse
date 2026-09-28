@@ -15,6 +15,7 @@ import { EmptyState, ErrorState, Skeleton, Spinner } from "../components/States"
 import { VendorComparison } from "../components/VendorComparison";
 import type { PageKey } from "../components/Sidebar";
 import { useAppState } from "../state/AppState";
+import { DISPLAY_LABEL, displayStatus } from "../utils/requestStatus";
 
 export function Dashboard({ onOpenVendor, onNavigate }: { onOpenVendor: (id: string) => void; onNavigate: (p: PageKey) => void }) {
   const { requests, vendors, activeRequest, evaluations, decisions, outcomes, evaluate, refreshAll, setActiveRequest, pushToast } = useAppState();
@@ -32,17 +33,16 @@ export function Dashboard({ onOpenVendor, onNavigate }: { onOpenVendor: (id: str
     : null;
 
   const status = activeRequest?.status;
+  const shown = activeRequest ? displayStatus(activeRequest, evalState, !!decision, !!outcome) : "pending";
   const stage: Stage = !activeRequest
     ? "request"
-    : outcome || status === "completed"
+    : shown === "completed"
       ? "retained"
-      : decision || status === "decided"
+      : shown === "decided"
         ? "outcome"
-        : evalState.status === "done"
+        : shown === "evaluated"
           ? "decide"
-          : evalState.status === "running"
-            ? "recall"
-            : "request";
+          : "recall";
 
   const activeCount = list.filter((r) => r.status !== "completed").length;
   const decidedCount = list.filter((r) => r.status === "decided" || r.status === "completed").length;
@@ -77,24 +77,6 @@ export function Dashboard({ onOpenVendor, onNavigate }: { onOpenVendor: (id: str
     <div className="page">
       <StoryBanner />
 
-      <div className="stats">
-        <StatCard label="Active procurement requests" icon="requests" value={activeCount} loading={loadingLists} hint={`${list.length} total in backend`} />
-        <StatCard
-          label="Vendors evaluated"
-          icon="vendors"
-          value={evaluation ? evaluation.vendor_comparison.length : "—"}
-          hint={evaluation && activeRequest ? `for ${activeRequest.request_number}` : "Awaiting evaluation"}
-        />
-        <StatCard label="Decisions recorded" icon="decisions" value={decidedCount} loading={loadingLists} hint="Human-approved requests" />
-        <StatCard
-          label="Hindsight memories"
-          icon="memory"
-          accent
-          value={evaluation ? evaluation.memory_evidence.length : "—"}
-          hint={evaluation ? "Recalled for the active request" : "Recalled during evaluation"}
-        />
-      </div>
-
       <LoopStrip stage={stage} busy={evalState.status === "running"} />
 
       {requests.status === "error" && !requests.data ? (
@@ -115,9 +97,17 @@ export function Dashboard({ onOpenVendor, onNavigate }: { onOpenVendor: (id: str
         <>
           <RequestCard
             request={activeRequest}
+            status={shown}
             actions={
               <>
-                {!decision && status !== "decided" && status !== "completed" && evaluateButton}
+                {!decision && status !== "decided" && status !== "completed" && (
+                  <div className="evaluate-cta">
+                    {evaluateButton}
+                    {evalState.status !== "done" && evalState.status !== "running" && (
+                      <span className="muted small">Recalls past experiences from Hindsight for every candidate vendor</span>
+                    )}
+                  </div>
+                )}
                 <div className="request-actions-right">
                   {list.length > 1 && (
                     <label className="inline-select">
@@ -125,7 +115,7 @@ export function Dashboard({ onOpenVendor, onNavigate }: { onOpenVendor: (id: str
                       <select value={activeRequest.id} onChange={(e) => setActiveRequest(e.target.value)} aria-label="Switch active request">
                         {list.map((r) => (
                           <option key={r.id} value={r.id}>
-                            {r.request_number} · {r.material_name} · {r.status}
+                            {r.request_number} · {r.material_name} · {DISPLAY_LABEL[displayStatus(r, evaluations[r.id], !!decisions[r.id], !!outcomes[r.id])]}
                           </option>
                         ))}
                       </select>
@@ -138,6 +128,24 @@ export function Dashboard({ onOpenVendor, onNavigate }: { onOpenVendor: (id: str
               </>
             }
           />
+
+          <div className="stats">
+            <StatCard label="Active procurement requests" icon="requests" value={activeCount} loading={loadingLists} hint={`${list.length} total in backend`} />
+            <StatCard
+              label="Vendors evaluated"
+              icon="vendors"
+              value={evaluation ? evaluation.vendor_comparison.length : "—"}
+              hint={evaluation && activeRequest ? `for ${activeRequest.request_number}` : "Awaiting evaluation"}
+            />
+            <StatCard label="Decisions recorded" icon="decisions" value={decidedCount} loading={loadingLists} hint="Human-approved requests" />
+            <StatCard
+              label="Hindsight memories"
+              icon="memory"
+              accent
+              value={evaluation ? evaluation.memory_evidence.length : "—"}
+              hint={evaluation ? "Recalled for the active request" : "Recalled during evaluation"}
+            />
+          </div>
 
           {vendors.data?.length === 0 && (
             <EmptyState icon="vendors" title="No vendors available to evaluate">
@@ -163,7 +171,7 @@ export function Dashboard({ onOpenVendor, onNavigate }: { onOpenVendor: (id: str
               ) : (
                 <EmptyState icon="vendors" title="The evaluation returned no vendor comparison" />
               )}
-              <RecommendationCard evaluation={evaluation} row={recRow} />
+              <RecommendationCard evaluation={evaluation} row={recRow} request={activeRequest} />
             </>
           )}
 

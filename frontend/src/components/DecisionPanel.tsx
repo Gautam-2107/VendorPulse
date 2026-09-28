@@ -84,9 +84,22 @@ export function DecisionPanel({ request, evaluation, decision }: { request: Purc
         <div>
           <span className="eyebrow">Human decision</span>
           <h3 id="decision-title">Final procurement decision</h3>
-          <p className="muted">VendorPulse does not place orders. A procurement manager must explicitly choose the vendor.</p>
+        </div>
+        <div className="handoff" aria-label="AI recommends, human decides">
+          <span className="handoff-step handoff-ai">
+            <Icon name="sparkle" size={13} /> AI recommends <b>{evaluation.recommended_vendor}</b>
+          </span>
+          <Icon name="arrowRight" size={14} className="handoff-arrow" />
+          <span className="handoff-step handoff-human">
+            <Icon name="user" size={13} /> Human decides
+          </span>
         </div>
       </div>
+      <p className="approval-note" role="note">
+        <Icon name="shield" size={14} />
+        {evaluation.important_caveats || "Human procurement manager must perform final approval before issuing formal purchase order."}
+        <span className="muted"> VendorPulse never places orders.</span>
+      </p>
 
       <div className="decision-choices" role="radiogroup" aria-label="Decision type">
         <button

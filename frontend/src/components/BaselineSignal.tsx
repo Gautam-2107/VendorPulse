@@ -38,7 +38,7 @@ export function BaselineSignal({ onOpenVendor, dimmed }: { onOpenVendor: (id: st
         <div>
           <span className="eyebrow eyebrow-plain">Current procurement signal</span>
           <h3 id="baseline-title">Vendor KPIs — before memory</h3>
-          <p className="muted">Aggregate supplier metrics from the vendor database. No Hindsight memory has been applied.</p>
+          <p className="muted">Aggregate supplier metrics from the vendor database — what traditional procurement sees. No Hindsight memory applied yet.</p>
         </div>
         <span className="tag tag-neutral">
           <Icon name="database" size={12} /> Structured data only

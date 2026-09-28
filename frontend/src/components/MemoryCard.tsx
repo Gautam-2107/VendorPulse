@@ -1,37 +1,52 @@
 import { useState } from "react";
 import type { MemoryEvidence } from "../types/api";
 import { extractMemoryFacts } from "../utils/memoryText";
+import type { MemoryFact } from "../utils/memoryText";
 import { Icon } from "./Icon";
 
-export function MemoryCard({ memory, index }: { memory: MemoryEvidence; index?: number }) {
-  const { reference, facts, synthetic, recordedOutcome } = extractMemoryFacts(memory.memory);
+/** Fields shown as compact metrics at the top of a card. */
+const METRIC_LABELS = ["Order status", "Compliance", "Delivery", "Delay", "Defect rate", "Additional cost"];
+/** Narrative fields shown as labelled lines. */
+const STORY_LABELS = ["Problem / reason", "Vendor explanation", "Resolution", "Outcome"];
+
+export function memoryHasIssue(facts: MemoryFact[]): boolean {
+  return facts.some((f) => f.tone === "risk");
+}
+
+export function MemoryCard({ memory, index, showVendor = true }: { memory: MemoryEvidence; index?: number; showVendor?: boolean }) {
+  const { reference, facts, recordedOutcome } = extractMemoryFacts(memory.memory);
   const [open, setOpen] = useState(facts.length === 0);
   const textId = `mem-text-${index ?? 0}-${memory.vendor.replace(/\W+/g, "")}`;
+  const issue = memoryHasIssue(facts);
+  const metrics = METRIC_LABELS.map((l) => facts.find((f) => f.label === l)).filter((f): f is MemoryFact => !!f);
+  const story = STORY_LABELS.map((l) => facts.find((f) => f.label === l)).filter((f): f is MemoryFact => !!f);
+  const known = facts.length > 0;
 
   return (
-    <article className="memory-card" style={index != null ? { animationDelay: `${Math.min(index, 12) * 45}ms` } : undefined}>
+    <article
+      className={`memory-card ${known ? (issue ? "memory-issue" : "memory-ok") : ""} ${recordedOutcome ? "memory-new" : ""}`}
+      style={index != null ? { animationDelay: `${Math.min(index, 12) * 40}ms` } : undefined}
+    >
       <header className="memory-head">
-        <span className="memory-icon" aria-hidden="true">
-          <Icon name="history" size={14} />
-        </span>
         <div className="memory-title">
-          <span className="memory-vendor">{memory.vendor}</span>
-          {reference && <span className="mono memory-ref">{reference}</span>}
+          {showVendor && <span className="memory-vendor">{memory.vendor}</span>}
+          <span className="mono memory-ref">{reference ?? "Recalled experience"}</span>
         </div>
-        <div className="memory-tags">
-          <span className="tag tag-memory">Past experience</span>
-          {recordedOutcome && <span className="tag tag-good">Recorded outcome</span>}
-          {synthetic && (
-            <span className="tag tag-neutral" title="Qualitative context in this memory is labelled as synthetic demo data by the dataset">
-              Synthetic context
-            </span>
-          )}
-        </div>
+        {recordedOutcome ? (
+          <span className="mem-state mem-state-new">
+            <Icon name="memory" size={11} /> Recorded outcome
+          </span>
+        ) : known ? (
+          <span className={`mem-state ${issue ? "mem-state-issue" : "mem-state-ok"}`}>
+            <span className="mem-dot" aria-hidden="true" />
+            {issue ? "Issue recorded" : "Clean delivery"}
+          </span>
+        ) : null}
       </header>
 
-      {facts.length > 0 && (
-        <dl className="memory-facts">
-          {facts.map((f) => (
+      {metrics.length > 0 && (
+        <dl className="memory-metrics">
+          {metrics.map((f) => (
             <div key={f.label} className={`fact fact-${f.tone ?? "neutral"}`}>
               <dt>{f.label}</dt>
               <dd>{f.value}</dd>
@@ -40,21 +55,29 @@ export function MemoryCard({ memory, index }: { memory: MemoryEvidence; index?: 
         </dl>
       )}
 
-      {facts.length > 0 && (
-        <button type="button" className="link-btn memory-toggle" aria-expanded={open} aria-controls={textId} onClick={() => setOpen((o) => !o)}>
-          <Icon name={open ? "chevronDown" : "chevronRight"} size={12} /> {open ? "Hide" : "Show"} recalled text
-        </button>
+      {story.length > 0 && (
+        <dl className="memory-story">
+          {story.map((f) => (
+            <div key={f.label} className={`story-row story-${f.tone ?? "neutral"}`}>
+              <dt>{f.label}</dt>
+              <dd>{f.value}</dd>
+            </div>
+          ))}
+        </dl>
       )}
+
+      <footer className="memory-foot">
+        {known && (
+          <button type="button" className="link-btn memory-toggle" aria-expanded={open} aria-controls={textId} onClick={() => setOpen((o) => !o)}>
+            <Icon name={open ? "chevronDown" : "chevronRight"} size={12} /> Recalled text
+          </button>
+        )}
+        {memory.relevance && <span className="memory-rel">{memory.relevance}</span>}
+      </footer>
       {open && (
         <blockquote id={textId} className="memory-text">
           {memory.memory}
         </blockquote>
-      )}
-
-      {memory.relevance && (
-        <footer className="memory-foot">
-          <Icon name="search" size={12} /> {memory.relevance}
-        </footer>
       )}
     </article>
   );

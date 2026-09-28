@@ -2,7 +2,8 @@ import { Icon } from "../components/Icon";
 import type { PageKey } from "../components/Sidebar";
 import { EmptyState, ErrorState, SkeletonRows } from "../components/States";
 import { useAppState } from "../state/AppState";
-import { formatDate, formatDateTime, formatFractionPct, statusLabel } from "../utils/format";
+import { formatDate, formatDateTime, formatFractionPct } from "../utils/format";
+import { DISPLAY_LABEL } from "../utils/requestStatus";
 
 export function Decisions({ onNavigate }: { onNavigate: (p: PageKey) => void }) {
   const { requests, decisions, outcomes, refreshAll, setActiveRequest } = useAppState();
@@ -37,7 +38,7 @@ export function Decisions({ onNavigate }: { onNavigate: (p: PageKey) => void }) 
                     <div className="timeline-head">
                       <span className="mono">{r.request_number}</span>
                       <b>{r.material_name}</b>
-                      <span className={`pill pill-sm pill-status-${r.status}`}>{statusLabel(r.status)}</span>
+                      <span className={`pill pill-sm pill-status-${r.status === "completed" || o ? "completed" : "decided"}`}>{DISPLAY_LABEL[r.status === "completed" || o ? "completed" : "decided"]}</span>
                       <button
                         type="button"
                         className="link-btn"

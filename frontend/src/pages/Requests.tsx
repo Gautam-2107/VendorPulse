@@ -4,16 +4,20 @@ import { Icon } from "../components/Icon";
 import type { PageKey } from "../components/Sidebar";
 import { EmptyState, ErrorState, SkeletonRows } from "../components/States";
 import { useAppState } from "../state/AppState";
-import { formatDate, formatDateTime, formatINR, formatInt, statusLabel } from "../utils/format";
+import { quantityLabel } from "../components/requestNotes";
+import { formatDate, formatDateTime, formatINR } from "../utils/format";
+import { DISPLAY_LABEL, displayStatus } from "../utils/requestStatus";
+import type { DisplayStatus } from "../utils/requestStatus";
 
-const FILTERS = ["all", "pending", "evaluated", "decided", "completed"] as const;
+const FILTERS = ["all", "pending", "evaluated", "decided", "completed"] as const satisfies readonly ("all" | DisplayStatus)[];
 
 export function Requests({ onNavigate }: { onNavigate: (p: PageKey) => void }) {
-  const { requests, refreshAll, setActiveRequest, activeRequestId } = useAppState();
+  const { requests, refreshAll, setActiveRequest, activeRequestId, evaluations, decisions, outcomes } = useAppState();
   const [filter, setFilter] = useState<(typeof FILTERS)[number]>("all");
   const [creating, setCreating] = useState(false);
   const list = requests.data ?? [];
-  const shown = filter === "all" ? list : list.filter((r) => r.status === filter);
+  const statusOf = (r: (typeof list)[number]) => displayStatus(r, evaluations[r.id], !!decisions[r.id], !!outcomes[r.id]);
+  const shown = filter === "all" ? list : list.filter((r) => statusOf(r) === filter);
 
   return (
     <div className="page">
@@ -21,7 +25,7 @@ export function Requests({ onNavigate }: { onNavigate: (p: PageKey) => void }) {
         <div className="filter-row" role="group" aria-label="Filter by status">
           {FILTERS.map((f) => (
             <button key={f} type="button" className={`filter-chip ${filter === f ? "on" : ""}`} aria-pressed={filter === f} onClick={() => setFilter(f)}>
-              {f === "all" ? "All" : statusLabel(f)} <span>{f === "all" ? list.length : list.filter((r) => r.status === f).length}</span>
+              {f === "all" ? "All" : DISPLAY_LABEL[f]} <span>{f === "all" ? list.length : list.filter((r) => statusOf(r) === f).length}</span>
             </button>
           ))}
         </div>
@@ -74,11 +78,11 @@ export function Requests({ onNavigate }: { onNavigate: (p: PageKey) => void }) {
                       {r.material_name}
                       <div className="muted small">{r.material_category}</div>
                     </td>
-                    <td className="num">{formatInt(r.quantity)}</td>
+                    <td className="num">{quantityLabel(r)}</td>
                     <td>{formatDate(r.target_delivery_date)}</td>
                     <td className="num">{formatINR(r.budget)}</td>
                     <td><span className={`pill pill-sm pill-priority-${r.priority.toLowerCase()}`}>{r.priority}</span></td>
-                    <td><span className={`pill pill-sm pill-status-${r.status}`}>{statusLabel(r.status)}</span></td>
+                    <td><span className={`pill pill-sm pill-status-${statusOf(r)}`}>{DISPLAY_LABEL[statusOf(r)]}</span></td>
                     <td className="small muted">{formatDateTime(r.created_at)}</td>
                     <td className="num">
                       <button

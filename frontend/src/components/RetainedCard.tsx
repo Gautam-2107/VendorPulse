@@ -41,6 +41,23 @@ export function RetainedCard({
         </div>
       </div>
 
+      <ol className="learn-seq" aria-label="Learning loop completion">
+        {[
+          { label: "Decision recorded", ok: !!decision },
+          { label: "Outcome recorded", ok: true },
+          { label: "Experience retained", ok: retained },
+          { label: "Available for future procurement", ok: retained },
+        ].map((st, i, arr) => (
+          <li key={st.label} className={st.ok ? "ok" : "warn"}>
+            <span className="learn-dot" aria-hidden="true">
+              <Icon name={st.ok ? "check" : "alert"} size={12} strokeWidth={2.5} />
+            </span>
+            <span>{st.label}</span>
+            {i < arr.length - 1 && <Icon name="arrowRight" size={13} className="learn-arrow" />}
+          </li>
+        ))}
+      </ol>
+
       <dl className="retained-grid">
         <div>
           <dt>Vendor</dt>
@@ -71,7 +88,8 @@ export function RetainedCard({
         <div>
           <dt>Retention status</dt>
           <dd className={retained ? "text-good" : "text-warn"}>
-            <code>is_retained_to_hindsight: {String(retained)}</code>
+            {retained ? "Retained to Hindsight" : "Not retained"}
+            <code className="retain-code">is_retained_to_hindsight: {String(retained)}</code>
           </dd>
         </div>
         <div>

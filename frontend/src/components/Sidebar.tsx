@@ -24,7 +24,8 @@ export function Sidebar({ page, onNavigate }: { page: PageKey; onNavigate: (p: P
           <span className="brand-sub">Vendor risk memory</span>
         </div>
       </div>
-      <nav>
+      <nav aria-label="Main">
+        <p className="nav-label">Workspace</p>
         <ul className="nav">
           {NAV.map((n) => (
             <li key={n.key}>

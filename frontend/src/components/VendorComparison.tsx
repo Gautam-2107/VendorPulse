@@ -66,7 +66,7 @@ export function VendorComparison({
     <section className="panel" aria-labelledby="comparison-title">
       <div className="panel-head">
         <div>
-          <span className="eyebrow eyebrow-plain">Vendor comparison</span>
+          <span className="eyebrow eyebrow-plain">Vendor comparison · current data + memory</span>
           <h3 id="comparison-title">Baseline risk + Hindsight effect = combined risk</h3>
           <p className="muted">Lower is better. Ranked by combined risk; {adjusted} of {rows.length} vendors had their risk changed by recalled history.</p>
         </div>
@@ -102,12 +102,14 @@ export function VendorComparison({
                       <span className="vendor-name">{row.vendor_name}</span>
                       <span className="vendor-meta">
                         {isRec(row) && <span className="tag tag-accent">Recommended</span>}
-                        <span className="tag tag-memory" title="Hindsight memories used for this vendor">
-                          <Icon name="memory" size={11} /> {row.memory_count}
-                        </span>
-                        {moved !== 0 && (
+                        {row.memory_count > 0 && (
+                          <span className="mem-count" title="Hindsight memories used for this vendor">
+                            <Icon name="memory" size={11} /> {row.memory_count} {row.memory_count === 1 ? "memory" : "memories"}
+                          </span>
+                        )}
+                        {moved !== 0 && adjustmentTone(row.hindsight_adjustment) !== "flat" && (
                           <span className={`rank-move ${moved > 0 ? "up" : "down"}`} title={`Rank by baseline only: #${baselineRank}`}>
-                            {moved > 0 ? "▲" : "▼"} {Math.abs(moved)} vs baseline
+                            {moved > 0 ? "▲" : "▼"} {Math.abs(moved)} {moved > 0 ? "up" : "down"} vs KPIs alone
                           </span>
                         )}
                       </span>

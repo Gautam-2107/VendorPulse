@@ -1,10 +1,11 @@
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import type { EvalState } from "../state/AppState";
-import type { PurchaseRequest } from "../types/api";
-import { Icon } from "./Icon";
-import { MemoryCard } from "./MemoryCard";
-import { EmptyState, ErrorState, Skeleton } from "./States";
+import type { MemoryEvidence, PurchaseRequest } from "../types/api";
+import { extractMemoryFacts } from "../utils/memoryText";
 import { useRevealOnMount } from "../utils/useRevealOnMount";
+import { Icon } from "./Icon";
+import { MemoryCard, memoryHasIssue } from "./MemoryCard";
+import { EmptyState, ErrorState, Skeleton } from "./States";
 
 export function HindsightPanel({
   evalState,
@@ -17,35 +18,59 @@ export function HindsightPanel({
   vendorCount: number;
   onRetry: () => void;
 }) {
-  const [filter, setFilter] = useState<string>("all");
   const revealRef = useRevealOnMount<HTMLElement>();
   const evidence = evalState.status === "done" ? evalState.data.memory_evidence : [];
 
-  const byVendor = useMemo(() => {
-    const m = new Map<string, number>();
-    for (const e of evidence) m.set(e.vendor, (m.get(e.vendor) ?? 0) + 1);
-    return [...m.entries()];
+  const { groups, issues, synthetic } = useMemo(() => {
+    const m = new Map<string, MemoryEvidence[]>();
+    let issueCount = 0;
+    let synth = false;
+    for (const e of evidence) {
+      const list = m.get(e.vendor) ?? [];
+      list.push(e);
+      m.set(e.vendor, list);
+      const f = extractMemoryFacts(e.memory);
+      if (memoryHasIssue(f.facts)) issueCount++;
+      if (f.synthetic) synth = true;
+    }
+    return { groups: [...m.entries()], issues: issueCount, synthetic: synth };
   }, [evidence]);
 
-  const shown = filter === "all" ? evidence : evidence.filter((e) => e.vendor === filter);
+  let cardIndex = 0;
 
   return (
-    <section ref={revealRef} className={`panel panel-memory ${evalState.status === "running" ? "is-recalling" : ""}`} aria-labelledby="hindsight-title" aria-busy={evalState.status === "running"}>
-      <div className="panel-head">
-        <div>
-          <span className="eyebrow eyebrow-memory">
-            <Icon name="memory" size={12} /> Hindsight Memory
-          </span>
-          <h3 id="hindsight-title">Relevant experiences recalled from previous procurement outcomes</h3>
-          <p className="muted">
-            Historical experiences — what actually happened on past orders — not predictions. Query: <b>{request.material_name}</b>
-            {request.material_category !== request.material_name && <> · {request.material_category}</>}
+    <section
+      ref={revealRef}
+      className={`panel panel-memory ${evalState.status === "running" ? "is-recalling" : ""}`}
+      aria-labelledby="hindsight-title"
+      aria-busy={evalState.status === "running"}
+    >
+      <div className="memory-panel-head">
+        <span className="memory-badge" aria-hidden="true">
+          <Icon name="memory" size={20} />
+        </span>
+        <div className="memory-panel-titles">
+          <span className="eyebrow eyebrow-memory">Recalled from Hindsight</span>
+          <h3 id="hindsight-title">Hindsight Memory</h3>
+          <p>
+            Relevant experiences recalled from previous procurement outcomes for <b>{request.material_name}</b> — what actually happened, not predictions.
           </p>
         </div>
-        {evalState.status === "done" && (
-          <span className="tag tag-memory">
-            {evidence.length} {evidence.length === 1 ? "memory" : "memories"} · {byVendor.length} {byVendor.length === 1 ? "vendor" : "vendors"}
-          </span>
+        {evalState.status === "done" && evidence.length > 0 && (
+          <dl className="memory-summary">
+            <div>
+              <dt>Memories</dt>
+              <dd>{evidence.length}</dd>
+            </div>
+            <div>
+              <dt>Vendors</dt>
+              <dd>{groups.length}</dd>
+            </div>
+            <div>
+              <dt>With issues</dt>
+              <dd className={issues ? "text-warn" : ""}>{issues}</dd>
+            </div>
+          </dl>
         )}
       </div>
 
@@ -60,9 +85,9 @@ export function HindsightPanel({
           <div className="memory-grid">
             {Array.from({ length: 3 }).map((_, i) => (
               <div key={i} className="memory-card memory-skeleton" aria-hidden="true">
-                <Skeleton h={12} w="45%" />
-                <Skeleton h={10} w="90%" />
-                <Skeleton h={10} w="80%" />
+                <Skeleton h={12} w="40%" />
+                <Skeleton h={34} />
+                <Skeleton h={10} w="85%" />
                 <Skeleton h={10} w="60%" />
               </div>
             ))}
@@ -79,26 +104,33 @@ export function HindsightPanel({
         </EmptyState>
       )}
 
-      {evalState.status === "done" && evidence.length > 0 && (
-        <>
-          {byVendor.length > 1 && (
-            <div className="filter-row" role="group" aria-label="Filter memories by vendor">
-              <button type="button" className={`filter-chip ${filter === "all" ? "on" : ""}`} aria-pressed={filter === "all"} onClick={() => setFilter("all")}>
-                All <span>{evidence.length}</span>
-              </button>
-              {byVendor.map(([v, n]) => (
-                <button key={v} type="button" className={`filter-chip ${filter === v ? "on" : ""}`} aria-pressed={filter === v} onClick={() => setFilter(v)}>
-                  {v} <span>{n}</span>
-                </button>
-              ))}
-            </div>
+      {evalState.status === "done" && groups.length > 0 && (
+        <div className="memory-groups">
+          {groups.map(([vendor, list]) => {
+            const vendorIssues = list.filter((e) => memoryHasIssue(extractMemoryFacts(e.memory).facts)).length;
+            return (
+              <div key={vendor} className="memory-group">
+                <div className="memory-group-head">
+                  <b>{vendor}</b>
+                  <span className="muted small">
+                    {list.length} {list.length === 1 ? "experience" : "experiences"}
+                    {vendorIssues > 0 ? ` · ${vendorIssues} with issues` : " · no issues recorded"}
+                  </span>
+                </div>
+                <div className="memory-grid">
+                  {list.map((m) => (
+                    <MemoryCard key={`${m.vendor}-${cardIndex}`} memory={m} index={cardIndex++} showVendor={false} />
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+          {synthetic && (
+            <p className="memory-footnote">
+              <Icon name="info" size={12} /> Qualitative context (reasons, explanations, resolutions) in seeded history is labelled by the dataset as synthetic demo data.
+            </p>
           )}
-          <div className="memory-grid">
-            {shown.map((m, i) => (
-              <MemoryCard key={`${m.vendor}-${i}`} memory={m} index={i} />
-            ))}
-          </div>
-        </>
+        </div>
       )}
     </section>
   );

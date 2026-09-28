@@ -1,28 +1,33 @@
 import type { ReactNode } from "react";
 import type { PurchaseRequest } from "../types/api";
-import { formatDate, formatINR, formatInt, statusLabel } from "../utils/format";
-import { Icon } from "./Icon";
-import { parseNotes } from "./requestNotes";
+import { formatDate, formatINR } from "../utils/format";
+import { DISPLAY_LABEL } from "../utils/requestStatus";
+import type { DisplayStatus } from "../utils/requestStatus";
+import { parseNotes, quantityLabel } from "./requestNotes";
 
-export function RequestCard({ request, actions }: { request: PurchaseRequest; actions?: ReactNode }) {
-  const { pairs, rest } = parseNotes(request.notes);
-  const requester = pairs["requester"];
-  const unit = pairs["unit"];
-  const window_ = pairs["procurement window"];
+export function RequestCard({ request, status, actions }: { request: PurchaseRequest; status: DisplayStatus; actions?: ReactNode }) {
+  const { requester, window: window_ } = parseNotes(request.notes, request.quantity);
+  const qty = quantityLabel(request);
+  const showCategory = request.material_category.trim().toLowerCase() !== request.material_name.trim().toLowerCase();
 
   return (
     <section className="request-card" aria-labelledby="active-request-title">
       <div className="request-top">
-        <div>
-          <span className="eyebrow">
+        <div className="request-heading">
+          <span className="eyebrow eyebrow-plain">
             Active procurement request · <span className="mono">{request.request_number}</span>
           </span>
           <h2 id="active-request-title">{requester ?? request.material_name}</h2>
-          {requester && <p className="request-sub">{request.material_name}</p>}
+          <p className="request-sub">
+            {qty} of {request.material_name}
+            {window_ ? ` · ${window_} procurement window` : ""}
+          </p>
         </div>
         <div className="request-badges">
-          <span className={`pill pill-priority-${request.priority.toLowerCase()}`}>{request.priority.toUpperCase()} PRIORITY</span>
-          <span className={`pill pill-status-${request.status}`}>{statusLabel(request.status)}</span>
+          <span className={`pill pill-priority-${request.priority.toLowerCase()}`}>{request.priority} priority</span>
+          <span className={`pill pill-status-${status}`} data-testid="request-status">
+            {DISPLAY_LABEL[status]}
+          </span>
         </div>
       </div>
 
@@ -31,15 +36,15 @@ export function RequestCard({ request, actions }: { request: PurchaseRequest; ac
           <dt>Material</dt>
           <dd>{request.material_name}</dd>
         </div>
-        <div>
-          <dt>Category</dt>
-          <dd>{request.material_category}</dd>
-        </div>
+        {showCategory && (
+          <div>
+            <dt>Category</dt>
+            <dd>{request.material_category}</dd>
+          </div>
+        )}
         <div>
           <dt>Quantity</dt>
-          <dd>
-            {formatInt(request.quantity)} {unit ?? "units"}
-          </dd>
+          <dd>{qty}</dd>
         </div>
         <div>
           <dt>Target delivery</dt>
@@ -51,16 +56,11 @@ export function RequestCard({ request, actions }: { request: PurchaseRequest; ac
         </div>
         {window_ && (
           <div>
-            <dt>Procurement window</dt>
+            <dt>Window</dt>
             <dd>{window_}</dd>
           </div>
         )}
       </dl>
-      {rest && (
-        <p className="request-notes">
-          <Icon name="info" size={13} /> {rest}
-        </p>
-      )}
       {actions && <div className="request-actions">{actions}</div>}
     </section>
   );
