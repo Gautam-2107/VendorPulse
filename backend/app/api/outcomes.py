@@ -16,7 +16,7 @@ router = APIRouter(prefix="/outcomes", tags=["Outcomes"])
 
 
 @router.post("", response_model=ProcurementOutcomeRead, status_code=status.HTTP_201_CREATED)
-def record_procurement_outcome(outcome_in: ProcurementOutcomeCreate, db: Session = Depends(get_db)):
+async def record_procurement_outcome(outcome_in: ProcurementOutcomeCreate, db: Session = Depends(get_db)):
     """Records actual procurement fulfillment outcome for a completed order and retains experience in Hindsight."""
     pr = db.query(PurchaseRequest).filter(PurchaseRequest.id == outcome_in.purchase_request_id).first()
     if not pr:
@@ -40,7 +40,7 @@ def record_procurement_outcome(outcome_in: ProcurementOutcomeCreate, db: Session
         )
 
     # Attempt Hindsight retention
-    retained_success = hindsight_service.retain_procurement_outcome(
+    retained_success = await hindsight_service.retain_procurement_outcome_async(
         vendor_name=vendor.name,
         po_id=pr.request_number,
         category=pr.material_category,
