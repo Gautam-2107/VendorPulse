@@ -48,19 +48,19 @@ Explanatory qualitative narratives generated to enrich Hindsight memories:
 
 The dataset provides rich longitudinal history for the primary demonstration vendors:
 
-### 1. SteelCore (100 Historical Orders)
+### 1. SteelCore
 - **Material**: Structural Steel
 - **Seasonal Risk Profile**:
-  - **July & August Orders**: Suffers recurring seasonal delays (+18 to +26 delivery days) and elevated defect rates (8% to 14%) caused by port customs backlogs and furnace heat-treatment calibration issues.
+  - **July & August Orders**: Shows longer summer fulfillment cycles (18 to 26 days) and elevated defect rates (8% to 14%) caused by port customs backlogs and furnace heat-treatment calibration issues.
   - **September - December Orders**: Demonstrates operational recovery (10 to 13 delivery days, 1% to 3% defect rate) following equipment maintenance and tooling upgrades.
 - **Hindsight Value**: Demonstrates temporal context awareness—recalling summer performance spikes without permanently labeling the supplier as "bad" in autumn.
 
-### 2. MetalWorks (80 Historical Orders)
+### 2. MetalWorks
 - **Material**: Structural Steel
 - **Performance Profile**: Highly reliable premium supplier with consistent lead times (9 to 12 days), zero compliance failures, and <1% defect rates.
 - **Hindsight Value**: Serves as the benchmark low-risk candidate.
 
-### 3. PrimeSteel (70 Historical Orders)
+### 3. PrimeSteel
 - **Material**: Structural Steel
 - **Performance Profile**: Competitive mid-tier pricing with moderate lead times (13 to 17 days), 2% to 4.5% defect rates, and occasional stock exhaustion cancellations.
 - **Hindsight Value**: Offers a cost-versus-reliability trade-off during vendor comparison.
@@ -105,3 +105,4 @@ Run the generator script from the repository root:
 ```bash
 python scripts/build_final_dataset.py
 ```
+
