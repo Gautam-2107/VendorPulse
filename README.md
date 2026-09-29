@@ -92,7 +92,7 @@ Human Decision
 Procurement Outcome
        ↓
 New Memory Retained
-
+```
 
 
 🧠 Hindsight Memory
@@ -216,6 +216,8 @@ Backend
 The backend is deployed using Render.
 Backend:
 https://vendorpulse-backend.onrender.com
+
+
 📊 Data
 VendorPulse uses procurement data containing supplier and order-performance information to demonstrate the procurement workflow.
 The project includes processed procurement datasets and supporting vendor information.
@@ -226,6 +228,8 @@ The data is used to demonstrate:
 - Quality-related signals
 - Supplier comparisons
 - Contextual memory
+
+
 🎯 Project Scope
 VendorPulse focuses on procurement decision support using organizational memory.
 The project demonstrates:
@@ -237,6 +241,8 @@ The project demonstrates:
 - Outcome retention
 - Reusable organizational experience
 The system is designed as a prototype and demonstration of memory-augmented procurement intelligence.
+
+
 ⚠️ Limitations
 VendorPulse does not currently provide:
 - Direct ERP integration
@@ -246,6 +252,8 @@ VendorPulse does not currently provide:
 - Real-world procurement authorization
 - Autonomous financial transactions
 The human procurement user remains responsible for the final decision.
+
+
 🧩 Why Organizational Memory?
 A procurement system can store historical records without necessarily making that history useful during the next decision.
 VendorPulse focuses on the step between storing information and actually using it.
@@ -261,6 +269,8 @@ Use as Context
 Inform Future Decisions
 
 The system therefore treats previous procurement outcomes as reusable organizational experience.
+
+
 🔗 Hindsight Resources
 VendorPulse uses Hindsight as its agent memory layer.
 Hindsight GitHub
@@ -269,6 +279,8 @@ Hindsight Documentation
 https://hindsight.vectorize.io/
 What is Agent Memory?
 https://vectorize.io/what-is-agent-memory
+
+
 👥 Team
 VendorPulse was developed by a five-member team.
 - Gautam Raju — Gautam-2107
@@ -276,6 +288,8 @@ VendorPulse was developed by a five-member team.
 - Nitin Kumar — Nithinkumar-07-Code
 - Chakravardhan Reddy — chakra032s-ai
 - Charan Teja — charantejabikkasani-lgtm
+
+
 🔗 Project Links
 GitHub Repository
 https://github.com/Gautam-2107/VendorPulse
