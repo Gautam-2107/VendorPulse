@@ -37,6 +37,7 @@ class ProcurementAgent:
                 "reasoning": "Database contains no registered vendors to evaluate.",
                 "risk_summary": "High Risk - No vendors available.",
                 "memory_evidence": [],
+                "recalled_memories": [],
                 "vendor_comparison": [],
                 "important_caveats": "Please seed vendor records.",
             }
@@ -51,18 +52,26 @@ class ProcurementAgent:
                 vendor_name=v.name,
                 query=f"{pr.material_name} {pr.material_category}",
                 category=pr.material_category,
-                top_k=3,
+                top_k=5,
             )
 
             v_mem_texts = []
             for mem in recalled_mems:
+                mem_text = mem["text"]
+                rel_score = mem.get("relevance_score", 0.85)
                 mem_entry = {
                     "vendor": v.name,
-                    "memory": mem["text"],
-                    "relevance": f"Relevance score: {mem['relevance_score']} for {pr.material_category}",
+                    "vendor_name": v.name,
+                    "memory": mem_text,
+                    "memory_text": mem_text,
+                    "text": mem_text,
+                    "relevance": f"Relevance score: {rel_score} for {pr.material_category}",
+                    "relevance_score": rel_score,
+                    "po_id": mem.get("po_id", "N/A"),
+                    "category": mem.get("category", pr.material_category),
                 }
                 all_recalled_memories.append(mem_entry)
-                v_mem_texts.append(mem["text"])
+                v_mem_texts.append(mem_text)
 
             vendor_evidence_list.append({
                 "vendor_id": v.id,
@@ -125,6 +134,7 @@ class ProcurementAgent:
             "reasoning": f"{analysis_text} Selected '{best_vendor.name}' based on superior historical quality metrics and favorable Hindsight memory context.",
             "risk_summary": f"Low-to-Medium Risk. Baseline defect rate: {round((best_vendor.average_defect_rate or 0)*100, 2)}%. Average lead time: {best_vendor.average_delivery_days or 10.0} days.",
             "memory_evidence": all_recalled_memories,
+            "recalled_memories": all_recalled_memories,
             "vendor_comparison": [
                 {
                     "vendor_id": ve["vendor_id"],

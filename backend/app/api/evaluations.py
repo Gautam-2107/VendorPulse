@@ -24,6 +24,7 @@ class EvaluationResponse(BaseModel):
     reasoning: str
     risk_summary: str
     memory_evidence: List[Dict[str, Any]]
+    recalled_memories: Optional[List[Dict[str, Any]]] = None
     vendor_comparison: List[Dict[str, Any]]
     important_caveats: str
 
