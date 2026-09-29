@@ -2,7 +2,7 @@ import { useState } from "react";
 import { BaselineSignal } from "../components/BaselineSignal";
 import { CreateRequestForm } from "../components/CreateRequestForm";
 import { DecisionPanel } from "../components/DecisionPanel";
-import { HindsightPanel } from "../components/HindsightPanel";
+import { HindsightPanel, HindsightPlaceholder } from "../components/HindsightPanel";
 import { Icon } from "../components/Icon";
 import { LoopStrip, StoryBanner } from "../components/LoopStrip";
 import type { Stage } from "../components/LoopStrip";
@@ -67,10 +67,32 @@ export function Dashboard({ onOpenVendor, onNavigate }: { onOpenVendor: (id: str
         <Spinner size={15} label="Recalling Hindsight memory…" />
       ) : (
         <>
-          <Icon name="memory" size={16} /> {evalState.status === "done" ? "Re-run evaluation" : "Evaluate Vendors"}
+          <Icon name="search" size={17} /> {evalState.status === "done" ? "Re-run evaluation" : "Evaluate Vendors"}
         </>
       )}
     </button>
+  );
+
+  const preEval = !!activeRequest && evalState.status === "idle" && !decision && status !== "decided" && status !== "completed";
+
+  const statsRow = (
+    <div className="stats">
+      <StatCard label="Active procurement requests" icon="requests" value={activeCount} loading={loadingLists} hint={`${list.length} total in backend`} />
+      <StatCard
+        label="Vendors evaluated"
+        icon="vendors"
+        value={evaluation ? evaluation.vendor_comparison.length : "—"}
+        hint={evaluation && activeRequest ? `for ${activeRequest.request_number}` : "Awaiting evaluation"}
+      />
+      <StatCard label="Decisions recorded" icon="decisions" value={decidedCount} loading={loadingLists} hint="Human-approved requests" />
+      <StatCard
+        label="Hindsight memories"
+        icon="memory"
+        accent
+        value={evaluation ? evaluation.memory_evidence.length : "—"}
+        hint={evaluation ? "Recalled for the active request" : "Recalled during evaluation"}
+      />
+    </div>
   );
 
   return (
@@ -129,23 +151,55 @@ export function Dashboard({ onOpenVendor, onNavigate }: { onOpenVendor: (id: str
             }
           />
 
-          <div className="stats">
-            <StatCard label="Active procurement requests" icon="requests" value={activeCount} loading={loadingLists} hint={`${list.length} total in backend`} />
-            <StatCard
-              label="Vendors evaluated"
-              icon="vendors"
-              value={evaluation ? evaluation.vendor_comparison.length : "—"}
-              hint={evaluation && activeRequest ? `for ${activeRequest.request_number}` : "Awaiting evaluation"}
-            />
-            <StatCard label="Decisions recorded" icon="decisions" value={decidedCount} loading={loadingLists} hint="Human-approved requests" />
-            <StatCard
-              label="Hindsight memories"
-              icon="memory"
-              accent
-              value={evaluation ? evaluation.memory_evidence.length : "—"}
-              hint={evaluation ? "Recalled for the active request" : "Recalled during evaluation"}
-            />
-          </div>
+          {preEval && (
+            <div className="intel-grid">
+              <HindsightPlaceholder request={activeRequest} />
+              <section className="rec-placeholder" aria-label="Recommendation">
+                <span className="eyebrow eyebrow-blue">
+                  <Icon name="sparkle" size={14} /> VendorPulse Recommendation
+                </span>
+                <h3>Awaiting evaluation</h3>
+                <p>The recommendation combines each vendor's baseline risk with the Hindsight adjustment from recalled experiences, once you evaluate vendors.</p>
+                <dl className="rec-placeholder-terms" aria-hidden="true">
+                  <div className="eq-baseline">
+                    <dt>Baseline risk</dt>
+                    <dd>—</dd>
+                  </div>
+                  <div className="eq-memory">
+                    <dt>Hindsight adjustment</dt>
+                    <dd>—</dd>
+                  </div>
+                  <div className="eq-combined">
+                    <dt>Combined risk</dt>
+                    <dd>—</dd>
+                  </div>
+                </dl>
+              </section>
+            </div>
+          )}
+
+          {evalState.status !== "idle" && (
+            <div className="intel-grid">
+              <HindsightPanel evalState={evalState} request={activeRequest} vendorCount={vendors.data?.length ?? 0} onRetry={() => void evaluate(activeRequest.id)} />
+              {evaluation ? (
+                <RecommendationCard evaluation={evaluation} row={recRow} request={activeRequest} />
+              ) : (
+                <section className="rec-placeholder" aria-live="polite">
+                  <span className="eyebrow eyebrow-blue">
+                    <Icon name="sparkle" size={14} /> VendorPulse Recommendation
+                  </span>
+                  <h3>{evalState.status === "running" ? "Waiting for Hindsight recall…" : "No recommendation available"}</h3>
+                  <p>
+                    {evalState.status === "running"
+                      ? "The recommendation is produced from current KPIs combined with the memories being recalled."
+                      : "The evaluation did not complete, so there is no recommendation for this request yet."}
+                  </p>
+                </section>
+              )}
+            </div>
+          )}
+
+          {statsRow}
 
           {vendors.data?.length === 0 && (
             <EmptyState icon="vendors" title="No vendors available to evaluate">
@@ -153,27 +207,19 @@ export function Dashboard({ onOpenVendor, onNavigate }: { onOpenVendor: (id: str
             </EmptyState>
           )}
 
-          {evalState.status === "idle" && !decision && status !== "decided" && status !== "completed" && <BaselineSignal onOpenVendor={onOpenVendor} />}
+          {preEval && <BaselineSignal onOpenVendor={onOpenVendor} />}
 
-          {evalState.status !== "idle" && (
-            <HindsightPanel evalState={evalState} request={activeRequest} vendorCount={vendors.data?.length ?? 0} onRetry={() => void evaluate(activeRequest.id)} />
-          )}
-
-          {evaluation && (
-            <>
-              {evaluation.vendor_comparison.length > 0 ? (
-                <VendorComparison
-                  rows={evaluation.vendor_comparison}
-                  recommendedId={evaluation.recommended_vendor_id}
-                  recommendedName={evaluation.recommended_vendor}
-                  onOpenVendor={onOpenVendor}
-                />
-              ) : (
-                <EmptyState icon="vendors" title="The evaluation returned no vendor comparison" />
-              )}
-              <RecommendationCard evaluation={evaluation} row={recRow} request={activeRequest} />
-            </>
-          )}
+          {evaluation &&
+            (evaluation.vendor_comparison.length > 0 ? (
+              <VendorComparison
+                rows={evaluation.vendor_comparison}
+                recommendedId={evaluation.recommended_vendor_id}
+                recommendedName={evaluation.recommended_vendor}
+                onOpenVendor={onOpenVendor}
+              />
+            ) : (
+              <EmptyState icon="vendors" title="The evaluation returned no vendor comparison" />
+            ))}
 
           {evaluation && !decision && status !== "decided" && status !== "completed" && (
             <DecisionPanel request={activeRequest} evaluation={evaluation} decision={null} />

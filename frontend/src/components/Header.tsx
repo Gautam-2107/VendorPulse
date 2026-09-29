@@ -16,7 +16,6 @@ export function Header({ title, subtitle }: { title: string; subtitle: string })
       <div className="header-meta">
         {activeRequest && (
           <div className="chip chip-request" title="Current procurement request">
-            <Icon name="requests" size={13} />
             <span className="mono">{activeRequest.request_number}</span>
             <span className="chip-sep" aria-hidden="true" />
             <span>{activeRequest.material_name}</span>

@@ -32,23 +32,25 @@ export function RecommendationCard({
 
   return (
     <section className="recommendation" aria-labelledby="rec-title">
-      <div className="rec-head">
-        <div>
-          <span className="eyebrow">VendorPulse Recommendation</span>
-          <h3 id="rec-title">{evaluation.recommended_vendor}</h3>
-          <p className="rec-line">
-            Recommended supplier for {quantityLabel(request)} of {request.material_name}
-            {row ? ` · lowest combined risk of ${rows.length} vendors` : ""}
-          </p>
-        </div>
+      <div className="rec-top">
+        <span className="eyebrow">
+          <Icon name="sparkle" size={14} /> VendorPulse Recommendation
+        </span>
         <div className="rec-tags">
           <span className="tag tag-accent">
-            <Icon name="sparkle" size={12} /> AI-assisted recommendation
+            <Icon name="plus" size={12} /> AI-assisted recommendation
           </span>
           <span className="tag tag-warn">
             <Icon name="user" size={12} /> Human approval required
           </span>
         </div>
+      </div>
+      <div className="rec-head">
+        <h3 id="rec-title">{evaluation.recommended_vendor}</h3>
+        <p className="rec-line">
+          Recommended supplier for {quantityLabel(request)} of {request.material_name}
+          {row ? ` · lowest combined risk of ${rows.length} vendors` : ""}
+        </p>
       </div>
 
       {row && (
@@ -80,25 +82,30 @@ export function RecommendationCard({
 
       {row && insight && (
         <div className="rec-insight">
-          <p className="rec-insight-lead">Current metrics alone are not the whole story.</p>
-          <ul>
-            <li>
-              {tone === "flat"
-                ? `No recalled experience changed ${possessive(row.vendor_name)} risk.`
-                : `Recalled history ${tone === "down" ? "lowered" : "raised"} ${possessive(row.vendor_name)} risk by ${Math.abs(row.hindsight_adjustment).toFixed(2)} points (${insight.pct.toFixed(0)}% of baseline).`}
-            </li>
-            <li>
-              {insight.baselineRank === insight.combinedRank
-                ? `Ranked #${insight.combinedRank} on current KPIs and #${insight.combinedRank} with memory.`
-                : `Ranked #${insight.baselineRank} on current KPIs alone → #${insight.combinedRank} with Hindsight memory.`}
-            </li>
-            {insight.adjusted > 0 && (
+          <span className="rec-insight-icon" aria-hidden="true">
+            <Icon name="info" size={14} />
+          </span>
+          <div className="rec-insight-body">
+            <p className="rec-insight-lead">Current metrics alone are not the whole story.</p>
+            <ul>
               <li>
-                Recalled history adjusted the risk of {insight.adjusted} of {rows.length} vendors.
+                {tone === "flat"
+                  ? `No recalled experience changed ${possessive(row.vendor_name)} risk.`
+                  : `Recalled history ${tone === "down" ? "lowered" : "raised"} ${possessive(row.vendor_name)} risk by ${Math.abs(row.hindsight_adjustment).toFixed(2)} points (${insight.pct.toFixed(0)}% of baseline).`}
               </li>
-            )}
-          </ul>
-          {row.memory_flags.length > 0 && <FlagChips flags={row.memory_flags} max={5} />}
+              <li>
+                {insight.baselineRank === insight.combinedRank
+                  ? `Ranked #${insight.combinedRank} on current KPIs and #${insight.combinedRank} with memory.`
+                  : `Ranked #${insight.baselineRank} on current KPIs alone → #${insight.combinedRank} with Hindsight memory.`}
+              </li>
+              {insight.adjusted > 0 && (
+                <li>
+                  Recalled history adjusted the risk of {insight.adjusted} of {rows.length} vendors.
+                </li>
+              )}
+            </ul>
+            {row.memory_flags.length > 0 && <FlagChips flags={row.memory_flags} max={5} />}
+          </div>
         </div>
       )}
 

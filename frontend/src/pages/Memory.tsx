@@ -3,6 +3,7 @@ import { describeError } from "../api/client";
 import { getVendorHistory } from "../api/vendors";
 import { Icon } from "../components/Icon";
 import { MemoryCard } from "../components/MemoryCard";
+import { SectionHead } from "../components/SectionHead";
 import { EmptyState, ErrorState, SkeletonRows } from "../components/States";
 import { useAppState } from "../state/AppState";
 import type { PurchaseOrder } from "../types/api";
@@ -77,54 +78,94 @@ export function Memory({ onOpenVendor }: { onOpenVendor: (id: string) => void })
   const lastRecall = ev?.status === "done" ? ev.data.memory_evidence : null;
   const vendorName = (id: string) => vendorList?.find((v) => v.id === id)?.name ?? "Unknown vendor";
 
+  const withHistory = hist.status === "ready" ? Object.values(hist.data).filter((l) => l.length > 0).length : null;
+
   return (
     <div className="page">
-      <section className="memory-hero">
-        <span className="eyebrow eyebrow-memory">
-          <Icon name="memory" size={12} /> Organizational Memory
-        </span>
-        <h2>What happened the last time we worked with this vendor?</h2>
-        <p>
-          <b>Memory is retrieved contextually during vendor evaluation.</b> Hindsight is queried per vendor with the material of the request being evaluated. The
-          backend does not expose an endpoint that lists every Hindsight memory, so this page shows the experiences that <i>are</i> available through the API:
-          outcomes recorded here, the most recent contextual recall, and the historical procurement records per vendor.
-        </p>
-      </section>
-
-      <section className="panel">
-        <div className="panel-head">
-          <div>
-            <span className="eyebrow eyebrow-plain">Newest memories</span>
-            <h3>Outcomes recorded in VendorPulse</h3>
-            <p className="muted">Each outcome was sent to Hindsight when recorded (POST /outcomes). Future evaluations can recall it.</p>
+      <section className="org-memory" aria-labelledby="org-memory-title">
+        <div className="org-memory-main">
+          <span className="icon-tile icon-tile-purple icon-tile-lg" aria-hidden="true">
+            <Icon name="memory" size={22} />
+          </span>
+          <div className="org-memory-text">
+            <span className="eyebrow eyebrow-purple">Organizational memory</span>
+            <h2 id="org-memory-title">What happened the last time we worked with this vendor?</h2>
+            <p className="lead">
+              Memory is retrieved contextually during vendor evaluation. Hindsight is queried per vendor with the material of the request being evaluated.
+            </p>
+            <p className="org-memory-note">
+              <Icon name="info" size={14} />
+              <span>
+                The backend does not expose an endpoint that lists every Hindsight memory, so this page shows the experiences that <i>are</i> available through
+                the API: outcomes recorded here, the most recent contextual recall, and the historical procurement records per vendor.
+              </span>
+            </p>
           </div>
         </div>
+        <dl className="org-memory-stats">
+          <div>
+            <dt>Outcomes recorded here</dt>
+            <dd>{recorded.length}</dd>
+          </div>
+          <div>
+            <dt>Memories in latest recall</dt>
+            <dd>{lastRecall ? lastRecall.length : "—"}</dd>
+          </div>
+          <div>
+            <dt>Vendors with history</dt>
+            <dd>{withHistory ?? "—"}</dd>
+          </div>
+        </dl>
+      </section>
+
+      <section className="card" aria-labelledby="newest-title">
+        <SectionHead
+          icon="history"
+          tone="green"
+          eyebrow="Newest memories"
+          title="Outcomes recorded in VendorPulse"
+          titleId="newest-title"
+          description={
+            <>
+              Each outcome was sent to Hindsight when recorded (<code>POST /outcomes</code>). Future evaluations can recall it.
+            </>
+          }
+        />
         {recorded.length === 0 ? (
           <EmptyState icon="history" title="No outcomes recorded from this browser yet">
             Complete the loop on the dashboard: evaluate → decide → record outcome.
           </EmptyState>
         ) : (
-          <ul className="recorded-list recorded-list-lg">
+          <ul className="recorded-list">
             {recorded.map(([reqId, o]) => (
-              <li key={o.id}>
-                <span className={`retained-dot ${o.is_retained_to_hindsight ? "ok" : "warn"}`} aria-hidden="true">
-                  <Icon name={o.is_retained_to_hindsight ? "check" : "alert"} size={12} />
+              <li key={o.id} className={`outcome-item ${o.is_retained_to_hindsight ? "is-retained" : "is-warn"}`}>
+                <span className="outcome-check" aria-hidden="true">
+                  <Icon name={o.is_retained_to_hindsight ? "check" : "alert"} size={15} strokeWidth={2.25} />
                 </span>
-                <div>
-                  <p>
-                    <button type="button" className="link-btn" onClick={() => onOpenVendor(o.vendor_id)}>
+                <div className="outcome-body">
+                  <p className="outcome-title">
+                    <button type="button" className="link-btn outcome-vendor" onClick={() => onOpenVendor(o.vendor_id)}>
                       {decisions[reqId]?.selected_vendor_name ?? vendorName(o.vendor_id)}
-                    </button>{" "}
-                    — {o.outcome_summary}
-                  </p>
-                  <p className="muted small">
-                    Delivered {formatDate(o.actual_delivery_date)} · {o.actual_delivery_days} days · delay {o.delay_days} d · defects {formatFractionPct(o.defect_rate)}
-                    {o.delay_reason ? ` · ${o.delay_reason}` : ""} ·{" "}
-                    <span className={o.is_retained_to_hindsight ? "text-good" : "text-warn"}>
-                      {o.is_retained_to_hindsight ? "retained to Hindsight" : "Hindsight retention failed"}
+                    </button>
+                    <span className="outcome-dash" aria-hidden="true">
+                      —
                     </span>
+                    <span>{o.outcome_summary}</span>
                   </p>
+                  <ul className="meta-row" aria-label="Outcome details">
+                    <li className="meta-chip">
+                      <Icon name="clock" size={12} /> Delivered {formatDate(o.actual_delivery_date)}
+                    </li>
+                    <li className="meta-chip">{o.actual_delivery_days} days</li>
+                    <li className="meta-chip">delay {o.delay_days} d</li>
+                    <li className="meta-chip">defects {formatFractionPct(o.defect_rate)}</li>
+                  </ul>
+                  {o.delay_reason && <p className="outcome-reason">{o.delay_reason}</p>}
                 </div>
+                <span className={`badge ${o.is_retained_to_hindsight ? "badge-green" : "badge-amber"}`}>
+                  <Icon name={o.is_retained_to_hindsight ? "memory" : "alert"} size={13} />
+                  {o.is_retained_to_hindsight ? "retained to Hindsight" : "Hindsight retention failed"}
+                </span>
               </li>
             ))}
           </ul>
@@ -132,16 +173,19 @@ export function Memory({ onOpenVendor }: { onOpenVendor: (id: string) => void })
       </section>
 
       {lastRecall && activeRequest && (
-        <section className="panel panel-memory">
-          <div className="panel-head">
-            <div>
-              <span className="eyebrow eyebrow-memory">Latest contextual recall</span>
-              <h3>
+        <section className="card card-purple panel-memory" aria-labelledby="recall-title">
+          <SectionHead
+            icon="memory"
+            tone="purple"
+            eyebrow="Latest contextual recall"
+            title={
+              <>
                 Recalled for {activeRequest.request_number} · {activeRequest.material_name}
-              </h3>
-            </div>
-            <span className="tag tag-memory">{lastRecall.length} memories</span>
-          </div>
+              </>
+            }
+            titleId="recall-title"
+            actions={<span className="badge badge-purple">{lastRecall.length} memories</span>}
+          />
           {lastRecall.length ? (
             <div className="memory-grid">
               {lastRecall.map((m, i) => (
@@ -154,27 +198,34 @@ export function Memory({ onOpenVendor }: { onOpenVendor: (id: string) => void })
         </section>
       )}
 
-      <section className="panel">
-        <div className="panel-head">
-          <div>
-            <span className="eyebrow eyebrow-plain">Procurement experience by vendor</span>
-            <h3>Historical purchase records</h3>
-            <p className="muted">From <code>GET /vendors/&#123;id&#125;/history</code>. Orders with a recorded reason, explanation, resolution or outcome are listed as experiences.</p>
-          </div>
-          {categories.length > 0 && (
-            <label className="inline-select">
-              <span className="small muted">Category</span>
-              <select value={category} onChange={(e) => setCategory(e.target.value)}>
-                <option value="all">All categories</option>
-                {categories.map((c) => (
-                  <option key={c} value={c}>
-                    {c}
-                  </option>
-                ))}
-              </select>
-            </label>
-          )}
-        </div>
+      <section className="card" aria-labelledby="history-title">
+        <SectionHead
+          icon="database"
+          tone="blue"
+          eyebrow="Procurement experience by vendor"
+          title="Historical purchase records"
+          titleId="history-title"
+          description={
+            <>
+              From <code>GET /vendors/&#123;id&#125;/history</code>. Orders with a recorded reason, explanation, resolution or outcome are listed as experiences.
+            </>
+          }
+          actions={
+            categories.length > 0 && (
+              <label className="inline-select">
+                <span className="inline-select-label">Category</span>
+                <select value={category} onChange={(e) => setCategory(e.target.value)}>
+                  <option value="all">All categories</option>
+                  {categories.map((c) => (
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )
+          }
+        />
 
         {vendors.status === "error" && !vendors.data ? (
           <ErrorState {...vendors.error} />
@@ -187,52 +238,89 @@ export function Memory({ onOpenVendor }: { onOpenVendor: (id: string) => void })
         ) : (
           <>
             {hist.failed > 0 && <p className="hint-risk small">History could not be loaded for {hist.failed} vendor(s).</p>}
-            <ul className="vendor-mem-list">
-              {grouped.map(({ vendor, total, experiences }) => {
-                const isOpen = open === vendor.id;
-                const problems = experiences.filter((p) => (p.delay_days ?? 0) > 0 || /cancel|partial/i.test(p.order_status) || /non-?compliant/i.test(p.compliance)).length;
-                return (
-                  <li key={vendor.id} className="vendor-mem">
-                    <button type="button" className="vendor-mem-row" aria-expanded={isOpen} onClick={() => setOpen(isOpen ? null : vendor.id)}>
-                      <Icon name={isOpen ? "chevronDown" : "chevronRight"} size={14} />
-                      <b>{vendor.name}</b>
-                      <span className="muted small">{total} orders</span>
-                      <span className="tag tag-memory">{experiences.length} experiences</span>
-                      {problems > 0 && <span className="tag tag-warn">{problems} with issues</span>}
-                    </button>
-                    {isOpen && (
-                      <div className="vendor-mem-body">
-                        {experiences.length === 0 ? (
-                          <p className="muted small">No qualitative context recorded for these orders.</p>
-                        ) : (
-                          <ul className="exp-list">
-                            {experiences.slice(0, 12).map((p) => (
-                              <li key={p.id}>
-                                <div className="exp-head">
-                                  <span className="mono">{p.po_id}</span>
-                                  <span className="muted small">{formatDate(p.order_date)} · {p.material_category} · {p.order_status} · {p.compliance}</span>
-                                  {p.is_synthetic_context && <span className="tag tag-neutral">Synthetic context</span>}
-                                </div>
-                                <dl className="exp-facts">
-                                  {p.delay_reason && <div><dt>Problem</dt><dd>{p.delay_reason}</dd></div>}
-                                  {p.vendor_explanation && <div><dt>Vendor explanation</dt><dd>{p.vendor_explanation}</dd></div>}
-                                  {p.resolution && <div><dt>Resolution</dt><dd>{p.resolution}</dd></div>}
-                                  {p.outcome && <div><dt>Outcome</dt><dd>{p.outcome}</dd></div>}
-                                </dl>
-                              </li>
-                            ))}
-                          </ul>
-                        )}
-                        {experiences.length > 12 && <p className="muted small">Showing 12 of {experiences.length}. Open the vendor for the full history.</p>}
-                        <button type="button" className="btn btn-ghost btn-sm" onClick={() => onOpenVendor(vendor.id)}>
-                          Open vendor intelligence <Icon name="chevronRight" size={13} />
-                        </button>
-                      </div>
-                    )}
-                  </li>
-                );
-              })}
-            </ul>
+            <div className="vendor-mem-table">
+              <div className="vendor-mem-cols" aria-hidden="true">
+                <span>Vendor</span>
+                <span>Orders</span>
+                <span>Experiences</span>
+                <span>Issues</span>
+              </div>
+              <ul className="vendor-mem-list">
+                {grouped.map(({ vendor, total, experiences }) => {
+                  const isOpen = open === vendor.id;
+                  const problems = experiences.filter((p) => (p.delay_days ?? 0) > 0 || /cancel|partial/i.test(p.order_status) || /non-?compliant/i.test(p.compliance)).length;
+                  return (
+                    <li key={vendor.id} className={`vendor-mem ${isOpen ? "is-open" : ""}`}>
+                      <button type="button" className="vendor-mem-row" aria-expanded={isOpen} onClick={() => setOpen(isOpen ? null : vendor.id)}>
+                        <span className="vendor-mem-name">
+                          <Icon name={isOpen ? "chevronDown" : "chevronRight"} size={15} className="vendor-mem-chevron" />
+                          <span className="avatar" aria-hidden="true">
+                            {vendor.name.slice(0, 2).toUpperCase()}
+                          </span>
+                          <b>{vendor.name}</b>
+                        </span>
+                        <span className="vendor-mem-orders">{total} orders</span>
+                        <span>
+                          <span className="badge badge-purple">{experiences.length} experiences</span>
+                        </span>
+                        <span>{problems > 0 ? <span className="badge badge-amber">{problems} with issues</span> : <span className="vendor-mem-none">No issues</span>}</span>
+                      </button>
+                      {isOpen && (
+                        <div className="vendor-mem-body">
+                          {experiences.length === 0 ? (
+                            <p className="muted small">No qualitative context recorded for these orders.</p>
+                          ) : (
+                            <ul className="exp-list">
+                              {experiences.slice(0, 12).map((p) => (
+                                <li key={p.id}>
+                                  <div className="exp-head">
+                                    <span className="mono exp-id">{p.po_id}</span>
+                                    <span className="muted small">
+                                      {formatDate(p.order_date)} · {p.material_category} · {p.order_status} · {p.compliance}
+                                    </span>
+                                    {p.is_synthetic_context && <span className="badge badge-neutral">Synthetic context</span>}
+                                  </div>
+                                  <dl className="exp-facts">
+                                    {p.delay_reason && (
+                                      <div>
+                                        <dt>Problem</dt>
+                                        <dd>{p.delay_reason}</dd>
+                                      </div>
+                                    )}
+                                    {p.vendor_explanation && (
+                                      <div>
+                                        <dt>Vendor explanation</dt>
+                                        <dd>{p.vendor_explanation}</dd>
+                                      </div>
+                                    )}
+                                    {p.resolution && (
+                                      <div>
+                                        <dt>Resolution</dt>
+                                        <dd>{p.resolution}</dd>
+                                      </div>
+                                    )}
+                                    {p.outcome && (
+                                      <div>
+                                        <dt>Outcome</dt>
+                                        <dd>{p.outcome}</dd>
+                                      </div>
+                                    )}
+                                  </dl>
+                                </li>
+                              ))}
+                            </ul>
+                          )}
+                          {experiences.length > 12 && <p className="muted small">Showing 12 of {experiences.length}. Open the vendor for the full history.</p>}
+                          <button type="button" className="btn btn-ghost btn-sm" onClick={() => onOpenVendor(vendor.id)}>
+                            Open vendor intelligence <Icon name="chevronRight" size={13} />
+                          </button>
+                        </div>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
           </>
         )}
       </section>

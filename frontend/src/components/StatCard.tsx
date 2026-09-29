@@ -20,10 +20,10 @@ export function StatCard({
 }) {
   return (
     <div className={`stat ${accent ? "stat-accent" : ""}`}>
-      <div className="stat-head">
-        <span className="stat-label">{label}</span>
-        <Icon name={icon} size={15} className="stat-icon" />
-      </div>
+      <span className="stat-icon" aria-hidden="true">
+        <Icon name={icon} size={24} strokeWidth={1.6} />
+      </span>
+      <span className="stat-label">{label}</span>
       <div className="stat-value">{loading ? <Skeleton h={26} w={56} /> : value}</div>
       {hint && <div className="stat-hint">{hint}</div>}
     </div>

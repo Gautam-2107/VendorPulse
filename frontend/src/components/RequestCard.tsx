@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import type { PurchaseRequest } from "../types/api";
 import { formatDate, formatINR } from "../utils/format";
 import { DISPLAY_LABEL } from "../utils/requestStatus";
+import { Icon } from "./Icon";
 import type { DisplayStatus } from "../utils/requestStatus";
 import { parseNotes, quantityLabel } from "./requestNotes";
 
@@ -24,7 +25,9 @@ export function RequestCard({ request, status, actions }: { request: PurchaseReq
           </p>
         </div>
         <div className="request-badges">
-          <span className={`pill pill-priority-${request.priority.toLowerCase()}`}>{request.priority} priority</span>
+          <span className={`pill pill-priority-${request.priority.toLowerCase()}`}>
+            <Icon name="diamond" size={11} /> {request.priority} priority
+          </span>
           <span className={`pill pill-status-${status}`} data-testid="request-status">
             {DISPLAY_LABEL[status]}
           </span>
@@ -33,30 +36,60 @@ export function RequestCard({ request, status, actions }: { request: PurchaseReq
 
       <dl className="request-grid">
         <div>
-          <dt>Material</dt>
+          <dt>
+            <span className="req-icon" aria-hidden="true">
+              <Icon name="box" size={17} />
+            </span>
+            <span className="req-label">Material</span>
+          </dt>
           <dd>{request.material_name}</dd>
         </div>
         {showCategory && (
           <div>
-            <dt>Category</dt>
+            <dt>
+            <span className="req-icon" aria-hidden="true">
+              <Icon name="requests" size={17} />
+            </span>
+            <span className="req-label">Category</span>
+          </dt>
             <dd>{request.material_category}</dd>
           </div>
         )}
         <div>
-          <dt>Quantity</dt>
+          <dt>
+            <span className="req-icon" aria-hidden="true">
+              <Icon name="scale" size={17} />
+            </span>
+            <span className="req-label">Quantity</span>
+          </dt>
           <dd>{qty}</dd>
         </div>
         <div>
-          <dt>Target delivery</dt>
+          <dt>
+            <span className="req-icon" aria-hidden="true">
+              <Icon name="calendar" size={17} />
+            </span>
+            <span className="req-label">Target delivery</span>
+          </dt>
           <dd>{formatDate(request.target_delivery_date)}</dd>
         </div>
         <div>
-          <dt>Budget</dt>
+          <dt>
+            <span className="req-icon" aria-hidden="true">
+              <Icon name="wallet" size={17} />
+            </span>
+            <span className="req-label">Budget</span>
+          </dt>
           <dd>{formatINR(request.budget)}</dd>
         </div>
         {window_ && (
           <div>
-            <dt>Window</dt>
+            <dt>
+            <span className="req-icon" aria-hidden="true">
+              <Icon name="clock" size={17} />
+            </span>
+            <span className="req-label">Window</span>
+          </dt>
             <dd>{window_}</dd>
           </div>
         )}

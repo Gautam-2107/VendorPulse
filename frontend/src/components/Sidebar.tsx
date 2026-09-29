@@ -48,9 +48,14 @@ export function Sidebar({ page, onNavigate }: { page: PageKey; onNavigate: (p: P
         </ul>
       </nav>
       <div className="sidebar-foot">
-        <span className="hindsight-badge">
-          <Icon name="memory" size={13} /> Powered by Hindsight memory
-        </span>
+        <div className="hindsight-badge">
+          <span className="hindsight-badge-icon" aria-hidden="true">
+            <Icon name="memory" size={17} />
+          </span>
+          <span className="hindsight-badge-text">
+            <small>Powered by</small> <b>Hindsight memory</b>
+          </span>
+        </div>
         <p>Human approval required for every procurement decision.</p>
       </div>
     </aside>

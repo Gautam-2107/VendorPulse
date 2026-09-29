@@ -1,8 +1,12 @@
 """Hindsight Memory Service for VendorPulse.
 
-Encapsulates official Hindsight Python SDK client integration,
-memory retention, contextual memory recall, and deterministic
-offline mock fallback store.
+Provides:
+- Hindsight Cloud retention
+- Hindsight Cloud recall
+- vendor/category-aware memory filtering
+- async-safe recall/retention
+- procurement outcome retention
+- deterministic mock fallback
 """
 
 from typing import Any, Dict, List, Optional
@@ -23,7 +27,7 @@ except ImportError:
 
 
 class HindsightService:
-    """Service wrapping Hindsight Memory SDK with mock fallback support."""
+    """Service wrapper around the official Hindsight SDK."""
 
     def __init__(
         self,
@@ -57,31 +61,27 @@ class HindsightService:
                 )
 
                 logger.info(
-                    "Hindsight Cloud client initialized successfully "
-                    "for bank '%s'.",
+                    "Hindsight Cloud client initialized for bank '%s'.",
                     self.bank_id,
                 )
 
             except Exception as err:
                 logger.warning(
-                    "Failed to initialize live Hindsight SDK client: %s. "
-                    "Falling back to mock mode.",
+                    "Failed to initialize Hindsight Cloud: %s",
                     err,
                 )
                 self.mock_mode = True
         else:
             self.mock_mode = True
 
-    # ------------------------------------------------------------------
-    # Metadata helpers
-    # ------------------------------------------------------------------
+    # ================================================================
+    # Helpers
+    # ================================================================
 
     @staticmethod
     def _stringify_metadata(
         metadata: Optional[Dict[str, Any]],
     ) -> Dict[str, str]:
-        """Convert metadata values to strings for Hindsight Cloud."""
-
         if not metadata:
             return {}
 
@@ -91,16 +91,16 @@ class HindsightService:
             if value is not None
         }
 
-    # ------------------------------------------------------------------
-    # Vendor validation
-    # ------------------------------------------------------------------
+    @staticmethod
+    def _normalise(value: Any) -> str:
+        return str(value or "").strip().lower()
 
     @staticmethod
     def _vendor_in_text(
         memory_text: str,
         vendor_name: str,
     ) -> bool:
-        """Check whether the requested vendor is actually named in memory."""
+        """Return True when the vendor name appears in memory text."""
 
         if not memory_text or not vendor_name:
             return False
@@ -111,39 +111,99 @@ class HindsightService:
             + r"(?![a-z0-9])"
         )
 
-        return re.search(
-            pattern,
-            memory_text.lower(),
-        ) is not None
+        return (
+            re.search(
+                pattern,
+                memory_text.lower(),
+            )
+            is not None
+        )
 
     @staticmethod
-    def _build_recall_item(
-        item: Any,
-        requested_vendor: str,
-        requested_category: Optional[str],
-    ) -> Dict[str, Any]:
-        """Normalize one Hindsight recall result."""
+    def _category_in_text(
+        memory_text: str,
+        category: Optional[str],
+    ) -> bool:
+        """Return True when category/material appears in memory text."""
 
-        text = str(
-            getattr(item, "text", "") or ""
-        )
+        if not memory_text or not category:
+            return False
+
+        return category.strip().lower() in memory_text.lower()
+
+    @staticmethod
+    def _get_item_text(item: Any) -> str:
+        """Support different Hindsight SDK result object shapes."""
+
+        text = getattr(item, "text", None)
+
+        if text:
+            return str(text)
+
+        content = getattr(item, "content", None)
+
+        if content:
+            return str(content)
+
+        if isinstance(item, dict):
+            return str(
+                item.get("text")
+                or item.get("content")
+                or ""
+            )
+
+        return ""
+
+    @staticmethod
+    def _get_item_metadata(item: Any) -> Dict[str, Any]:
+        """Safely extract metadata from SDK result."""
 
         metadata = getattr(
             item,
             "metadata",
-            {},
-        ) or {}
+            None,
+        )
+
+        if metadata is None and isinstance(item, dict):
+            metadata = item.get("metadata")
 
         if not isinstance(metadata, dict):
-            metadata = {}
+            return {}
 
-        relevance_score = 0.85
+        return metadata
 
+    @staticmethod
+    def _get_item_score(item: Any) -> float:
+        """Extract relevance score from different SDK response shapes."""
+
+        # Direct score
+        score = getattr(
+            item,
+            "score",
+            None,
+        )
+
+        if score is None and isinstance(item, dict):
+            score = item.get("score")
+
+        if score is not None:
+            try:
+                return float(score)
+            except (
+                TypeError,
+                ValueError,
+            ):
+                pass
+
+        # Nested scores
         scores = getattr(
             item,
             "scores",
             None,
         )
+
+        if scores is None and isinstance(item, dict):
+            scores = item.get("scores")
 
         if scores is not None:
             for field_name in (
@@ -157,21 +217,76 @@ class HindsightService:
                     None,
                 )
 
+                if value is None and isinstance(
+                    scores,
+                    dict,
+                ):
+                    value = scores.get(field_name)
+
                 if value is not None:
                     try:
-                        relevance_score = float(value)
-                        break
+                        return float(value)
                     except (
                         TypeError,
                         ValueError,
                     ):
                         pass
 
+        return 0.85
+
+    @staticmethod
+    def _extract_items(response: Any) -> List[Any]:
+        """Normalize Hindsight recall response."""
+
+        if response is None:
+            return []
+
+        if isinstance(response, list):
+            return response
+
+        for attr in (
+            "results",
+            "memories",
+            "items",
+        ):
+            value = getattr(
+                response,
+                attr,
+                None,
+            )
+
+            if value is not None:
+                return list(value or [])
+
+        if isinstance(response, dict):
+            for key in (
+                "results",
+                "memories",
+                "items",
+            ):
+                if key in response:
+                    return list(
+                        response.get(key)
+                        or []
+                    )
+
+        return []
+
+    @classmethod
+    def _build_recall_item(
+        cls,
+        item: Any,
+        requested_vendor: str,
+        requested_category: Optional[str],
+    ) -> Dict[str, Any]:
+        """Normalize a Hindsight memory result."""
+
+        text = cls._get_item_text(item)
+
+        metadata = cls._get_item_metadata(item)
+
         return {
-            # IMPORTANT:
-            # The requested vendor is authoritative. Do not expose
-            # potentially incorrect Hindsight vendor metadata as the
-            # vendor identity used by the agent.
+            # Requested vendor remains authoritative.
             "vendor_name": requested_vendor,
             "po_id": metadata.get(
                 "po_id",
@@ -182,13 +297,13 @@ class HindsightService:
                 requested_category or "General",
             ),
             "text": text,
-            "relevance_score": relevance_score,
+            "relevance_score": cls._get_item_score(item),
             "metadata": metadata,
         }
 
-    # ------------------------------------------------------------------
-    # Experience retention
-    # ------------------------------------------------------------------
+    # ================================================================
+    # Retention
+    # ================================================================
 
     def retain_purchase_experience(
         self,
@@ -199,7 +314,7 @@ class HindsightService:
         metadata: Optional[Dict[str, Any]] = None,
         is_synthetic_context: bool = True,
     ) -> bool:
-        """Retain one procurement experience in Hindsight."""
+        """Retain one procurement experience."""
 
         if not experience_text:
             return False
@@ -221,26 +336,24 @@ class HindsightService:
         }
 
         if self.mock_mode or not self._client:
-            self._mock_memories.append(memory_item)
+            self._mock_memories.append(
+                memory_item
+            )
 
             logger.info(
-                "[Mock Hindsight] Retained memory for vendor '%s' "
-                "in bank '%s'",
+                "[Mock Hindsight] Retained memory for '%s'.",
                 vendor_name,
-                self.bank_id,
             )
 
             return True
-
-        cloud_metadata = self._stringify_metadata(
-            raw_metadata
-        )
 
         try:
             response = self._client.retain(
                 bank_id=self.bank_id,
                 content=experience_text,
-                metadata=cloud_metadata,
+                metadata=self._stringify_metadata(
+                    raw_metadata
+                ),
             )
 
             return bool(
@@ -289,20 +402,11 @@ class HindsightService:
         }
 
         if self.mock_mode or not self.api_key:
-            self._mock_memories.append(memory_item)
-
-            logger.info(
-                "[Mock Hindsight] Retained async memory for vendor '%s' "
-                "in bank '%s'",
-                vendor_name,
-                self.bank_id,
+            self._mock_memories.append(
+                memory_item
             )
 
             return True
-
-        cloud_metadata = self._stringify_metadata(
-            raw_metadata
-        )
 
         client = None
 
@@ -315,7 +419,9 @@ class HindsightService:
             response = await client.aretain(
                 bank_id=self.bank_id,
                 content=experience_text,
-                metadata=cloud_metadata,
+                metadata=self._stringify_metadata(
+                    raw_metadata
+                ),
             )
 
             return bool(
@@ -337,15 +443,12 @@ class HindsightService:
             if client is not None:
                 try:
                     await client.aclose()
-                except Exception as close_err:
-                    logger.warning(
-                        "Failed to close temporary Hindsight client: %s",
-                        close_err,
-                    )
+                except Exception:
+                    pass
 
-    # ------------------------------------------------------------------
+    # ================================================================
     # Recall
-    # ------------------------------------------------------------------
+    # ================================================================
 
     def recall_vendor_experience(
         self,
@@ -354,149 +457,274 @@ class HindsightService:
         category: Optional[str] = None,
         top_k: int = 5,
     ) -> List[Dict[str, Any]]:
-        """Recall vendor history with narrative-level vendor validation."""
+        """Recall relevant memories for one vendor.
 
-        if top_k <= 0 or not vendor_name:
+        A memory is accepted when:
+        - vendor metadata matches, OR
+        - vendor name appears in memory text.
+
+        Category/material matching is also checked when possible.
+        """
+
+        if (
+            top_k <= 0
+            or not vendor_name
+        ):
             return []
 
-        # --------------------------------------------------------------
+        # ------------------------------------------------------------
         # MOCK MODE
-        # --------------------------------------------------------------
+        # ------------------------------------------------------------
 
         if self.mock_mode or not self._client:
             results: List[Dict[str, Any]] = []
 
-            vendor_clean = vendor_name.strip().lower()
-
-            cat_clean = (
-                category.strip().lower()
-                if category
-                else None
+            vendor_clean = self._normalise(
+                vendor_name
             )
 
-            query_clean = (
-                query.strip().lower()
-                if query
-                else ""
+            category_clean = self._normalise(
+                category
             )
+
+            query_clean = self._normalise(
+                query
+            )
+
+            query_terms = [
+                term
+                for term in query_clean.split()
+                if len(term) > 3
+            ]
 
             for mem in self._mock_memories:
-                m_vendor = (
-                    mem["vendor_name"]
-                    .strip()
-                    .lower()
+                mem_vendor = self._normalise(
+                    mem.get("vendor_name")
                 )
 
-                m_category = (
-                    mem["category"]
-                    .strip()
-                    .lower()
+                mem_category = self._normalise(
+                    mem.get("category")
                 )
 
-                m_text = mem["text"].lower()
+                mem_text = self._normalise(
+                    mem.get("text")
+                )
 
-                match_score = 0.0
+                if mem_vendor != vendor_clean:
+                    continue
 
-                if m_vendor == vendor_clean:
-                    match_score += 0.5
+                score = 0.5
 
                 if (
-                    cat_clean
-                    and m_category == cat_clean
+                    category_clean
+                    and mem_category
+                    == category_clean
                 ):
-                    match_score += 0.3
+                    score += 0.3
 
-                if query_clean:
-                    query_terms = [
-                        term
-                        for term in query_clean.split()
-                        if len(term) > 3
-                    ]
+                if query_terms and any(
+                    term in mem_text
+                    for term in query_terms
+                ):
+                    score += 0.2
 
-                    if any(
-                        term in m_text
-                        for term in query_terms
-                    ):
-                        match_score += 0.2
-
-                if match_score > 0.3:
-                    results.append(
-                        {
-                            "vendor_name": mem["vendor_name"],
-                            "po_id": mem["po_id"],
-                            "category": mem["category"],
-                            "text": mem["text"],
-                            "relevance_score": round(
-                                match_score,
-                                2,
-                            ),
-                            "metadata": mem["metadata"],
-                        }
-                    )
+                results.append(
+                    {
+                        "vendor_name": vendor_name,
+                        "po_id": mem.get(
+                            "po_id",
+                            "N/A",
+                        ),
+                        "category": mem.get(
+                            "category",
+                            category or "General",
+                        ),
+                        "text": mem.get(
+                            "text",
+                            "",
+                        ),
+                        "relevance_score": round(
+                            score,
+                            2,
+                        ),
+                        "metadata": mem.get(
+                            "metadata",
+                            {},
+                        ),
+                    }
+                )
 
             results.sort(
-                key=lambda item: item["relevance_score"],
+                key=lambda item: item[
+                    "relevance_score"
+                ],
                 reverse=True,
             )
 
             return results[:top_k]
 
-        # --------------------------------------------------------------
+        # ------------------------------------------------------------
         # REAL HINDSIGHT CLOUD
-        # --------------------------------------------------------------
+        # ------------------------------------------------------------
 
         try:
-            search_query = (
-                f"{vendor_name} "
-                f"{category or ''} "
-                f"{query}"
-            ).strip()
+            # Multiple focused queries improve recall for newly-created
+            # requests while still using Hindsight semantic retrieval.
+            queries = []
 
-            response = self._client.recall(
-                bank_id=self.bank_id,
-                query=search_query,
+            if vendor_name and category:
+                queries.append(
+                    f"{vendor_name} {category}"
+                )
+
+            if vendor_name and query:
+                queries.append(
+                    f"{vendor_name} {query}"
+                )
+
+            if vendor_name:
+                queries.append(
+                    vendor_name
+                )
+
+            # Remove duplicate queries.
+            unique_queries = list(
+                dict.fromkeys(
+                    q.strip()
+                    for q in queries
+                    if q.strip()
+                )
             )
 
-            items = getattr(
-                response,
-                "results",
-                [],
-            ) or []
+            collected: List[
+                Dict[str, Any]
+            ] = []
 
-            recalled_list: List[Dict[str, Any]] = []
+            seen = set()
 
-            # IMPORTANT:
-            # Do NOT slice items before filtering.
-            # Hindsight may return mismatched metadata in the first
-            # semantic results. We need to scan all returned candidates
-            # and only then enforce top_k.
-            for item in items:
-                text = str(
-                    getattr(
-                        item,
-                        "text",
-                        "",
-                    ) or ""
-                )
-
-                if not self._vendor_in_text(
-                    text,
-                    vendor_name,
-                ):
-                    continue
-
-                recalled_list.append(
-                    self._build_recall_item(
-                        item,
-                        vendor_name,
-                        category,
+            for search_query in unique_queries:
+                try:
+                    response = self._client.recall(
+                        bank_id=self.bank_id,
+                        query=search_query,
                     )
-                )
 
-                if len(recalled_list) >= top_k:
-                    break
+                    items = self._extract_items(
+                        response
+                    )
 
-            return recalled_list
+                    for item in items:
+                        text = self._get_item_text(
+                            item
+                        )
+
+                        metadata = (
+                            self._get_item_metadata(
+                                item
+                            )
+                        )
+
+                        requested_vendor = (
+                            self._normalise(
+                                vendor_name
+                            )
+                        )
+
+                        metadata_vendor = (
+                            self._normalise(
+                                metadata.get(
+                                    "vendor_name"
+                                )
+                            )
+                        )
+
+                        # IMPORTANT:
+                        # Hindsight metadata is authoritative when
+                        # it explicitly identifies this vendor.
+                        vendor_matches = (
+                            metadata_vendor
+                            == requested_vendor
+                            or self._vendor_in_text(
+                                text,
+                                vendor_name,
+                            )
+                        )
+
+                        if not vendor_matches:
+                            continue
+
+                        # If metadata contains an explicit category,
+                        # require it to match the requested category.
+                        metadata_category = (
+                            self._normalise(
+                                metadata.get(
+                                    "category"
+                                )
+                            )
+                        )
+
+                        requested_category = (
+                            self._normalise(
+                                category
+                            )
+                        )
+
+                        if (
+                            metadata_category
+                            and requested_category
+                            and metadata_category
+                            != requested_category
+                        ):
+                            # The text can still rescue the result
+                            # if the requested material/category is
+                            # explicitly mentioned.
+                            if not self._category_in_text(
+                                text,
+                                category,
+                            ):
+                                continue
+
+                        memory = (
+                            self._build_recall_item(
+                                item,
+                                vendor_name,
+                                category,
+                            )
+                        )
+
+                        # Deduplicate using memory text + PO.
+                        dedupe_key = (
+                            memory["po_id"],
+                            memory["text"].strip().lower(),
+                        )
+
+                        if dedupe_key in seen:
+                            continue
+
+                        seen.add(
+                            dedupe_key
+                        )
+
+                        collected.append(
+                            memory
+                        )
+
+                except Exception as query_err:
+                    logger.warning(
+                        "Hindsight recall query failed "
+                        "for '%s': %s",
+                        search_query,
+                        query_err,
+                    )
+
+            collected.sort(
+                key=lambda item: item[
+                    "relevance_score"
+                ],
+                reverse=True,
+            )
+
+            return collected[:top_k]
 
         except Exception as err:
             logger.error(
@@ -512,9 +740,12 @@ class HindsightService:
         category: Optional[str] = None,
         top_k: int = 5,
     ) -> List[Dict[str, Any]]:
-        """Async-safe recall using a client bound to the current event loop."""
+        """Async-safe Hindsight recall."""
 
-        if top_k <= 0 or not vendor_name:
+        if (
+            top_k <= 0
+            or not vendor_name
+        ):
             return []
 
         if self.mock_mode or not self.api_key:
@@ -533,52 +764,113 @@ class HindsightService:
                 api_key=self.api_key,
             )
 
-            search_query = (
-                f"{vendor_name} "
-                f"{category or ''} "
-                f"{query}"
-            ).strip()
+            queries = []
 
-            response = await client.arecall(
-                bank_id=self.bank_id,
-                query=search_query,
+            if vendor_name and category:
+                queries.append(
+                    f"{vendor_name} {category}"
+                )
+
+            if vendor_name and query:
+                queries.append(
+                    f"{vendor_name} {query}"
+                )
+
+            if vendor_name:
+                queries.append(
+                    vendor_name
+                )
+
+            unique_queries = list(
+                dict.fromkeys(
+                    q.strip()
+                    for q in queries
+                    if q.strip()
+                )
             )
 
-            items = getattr(
-                response,
-                "results",
-                [],
-            ) or []
+            collected = []
+            seen = set()
 
-            recalled_list: List[Dict[str, Any]] = []
-
-            for item in items:
-                text = str(
-                    getattr(
-                        item,
-                        "text",
-                        "",
-                    ) or ""
+            for search_query in unique_queries:
+                response = await client.arecall(
+                    bank_id=self.bank_id,
+                    query=search_query,
                 )
 
-                if not self._vendor_in_text(
-                    text,
-                    vendor_name,
-                ):
-                    continue
+                items = self._extract_items(
+                    response
+                )
 
-                recalled_list.append(
-                    self._build_recall_item(
-                        item,
-                        vendor_name,
-                        category,
+                for item in items:
+                    text = self._get_item_text(
+                        item
                     )
-                )
 
-                if len(recalled_list) >= top_k:
-                    break
+                    metadata = (
+                        self._get_item_metadata(
+                            item
+                        )
+                    )
 
-            return recalled_list
+                    requested_vendor = (
+                        self._normalise(
+                            vendor_name
+                        )
+                    )
+
+                    metadata_vendor = (
+                        self._normalise(
+                            metadata.get(
+                                "vendor_name"
+                            )
+                        )
+                    )
+
+                    vendor_matches = (
+                        metadata_vendor
+                        == requested_vendor
+                        or self._vendor_in_text(
+                            text,
+                            vendor_name,
+                        )
+                    )
+
+                    if not vendor_matches:
+                        continue
+
+                    memory = (
+                        self._build_recall_item(
+                            item,
+                            vendor_name,
+                            category,
+                        )
+                    )
+
+                    dedupe_key = (
+                        memory["po_id"],
+                        memory["text"].strip().lower(),
+                    )
+
+                    if dedupe_key in seen:
+                        continue
+
+                    seen.add(
+                        dedupe_key
+                    )
+
+                    collected.append(
+                        memory
+                    )
+
+            collected.sort(
+                key=lambda item: item[
+                    "relevance_score"
+                ],
+                reverse=True,
+            )
+
+            return collected[:top_k]
 
         except Exception as err:
             logger.error(
@@ -591,15 +883,12 @@ class HindsightService:
             if client is not None:
                 try:
                     await client.aclose()
-                except Exception as close_err:
-                    logger.warning(
-                        "Failed to close temporary Hindsight recall client: %s",
-                        close_err,
-                    )
+                except Exception:
+                    pass
 
-    # ------------------------------------------------------------------
+    # ================================================================
     # Procurement outcomes
-    # ------------------------------------------------------------------
+    # ================================================================
 
     @staticmethod
     def _build_outcome(
@@ -614,7 +903,7 @@ class HindsightService:
         resolution: Optional[str] = None,
         additional_cost: float = 0.0,
     ):
-        """Build procurement outcome narrative and metadata."""
+        """Build procurement outcome narrative."""
 
         narrative_parts = [
             (
@@ -643,8 +932,7 @@ class HindsightService:
         if defect_rate > 0:
             narrative_parts.append(
                 "Quality inspection recorded defect "
-                f"rate of "
-                f"{round(defect_rate * 100, 2)}%."
+                f"rate of {round(defect_rate * 100, 2)}%."
             )
 
         if vendor_explanation:
@@ -678,7 +966,10 @@ class HindsightService:
             ),
         }
 
-        return experience_narrative, metadata
+        return (
+            experience_narrative,
+            metadata,
+        )
 
     def retain_procurement_outcome(
         self,
@@ -693,19 +984,21 @@ class HindsightService:
         resolution: Optional[str] = None,
         additional_cost: float = 0.0,
     ) -> bool:
-        """Synchronous procurement outcome retention."""
+        """Synchronously retain a procurement outcome."""
 
-        experience_narrative, metadata = self._build_outcome(
-            vendor_name=vendor_name,
-            po_id=po_id,
-            category=category,
-            outcome_summary=outcome_summary,
-            delay_days=delay_days,
-            defect_rate=defect_rate,
-            delay_reason=delay_reason,
-            vendor_explanation=vendor_explanation,
-            resolution=resolution,
-            additional_cost=additional_cost,
+        experience_narrative, metadata = (
+            self._build_outcome(
+                vendor_name=vendor_name,
+                po_id=po_id,
+                category=category,
+                outcome_summary=outcome_summary,
+                delay_days=delay_days,
+                defect_rate=defect_rate,
+                delay_reason=delay_reason,
+                vendor_explanation=vendor_explanation,
+                resolution=resolution,
+                additional_cost=additional_cost,
+            )
         )
 
         return self.retain_purchase_experience(
@@ -732,17 +1025,19 @@ class HindsightService:
     ) -> bool:
         """Async-safe procurement outcome retention."""
 
-        experience_narrative, metadata = self._build_outcome(
-            vendor_name=vendor_name,
-            po_id=po_id,
-            category=category,
-            outcome_summary=outcome_summary,
-            delay_days=delay_days,
-            defect_rate=defect_rate,
-            delay_reason=delay_reason,
-            vendor_explanation=vendor_explanation,
-            resolution=resolution,
-            additional_cost=additional_cost,
+        experience_narrative, metadata = (
+            self._build_outcome(
+                vendor_name=vendor_name,
+                po_id=po_id,
+                category=category,
+                outcome_summary=outcome_summary,
+                delay_days=delay_days,
+                defect_rate=defect_rate,
+                delay_reason=delay_reason,
+                vendor_explanation=vendor_explanation,
+                resolution=resolution,
+                additional_cost=additional_cost,
+            )
         )
 
         return await self.retain_purchase_experience_async(
@@ -754,12 +1049,12 @@ class HindsightService:
             is_synthetic_context=False,
         )
 
-    # ------------------------------------------------------------------
+    # ================================================================
     # Lifecycle
-    # ------------------------------------------------------------------
+    # ================================================================
 
     def close(self) -> None:
-        """Close the persistent synchronous Hindsight client."""
+        """Close persistent Hindsight client."""
 
         if self._client is not None:
             try:

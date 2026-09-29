@@ -45,7 +45,7 @@ function FlowNode({ icon, title, sub, tone }: { icon: IconName; title: string; s
   return (
     <div className={`flow-node flow-${tone}`}>
       <span className="flow-icon" aria-hidden="true">
-        <Icon name={icon} size={15} />
+        <Icon name={icon} size={18} />
       </span>
       <span className="flow-text">
         <b>{title}</b>
@@ -64,31 +64,52 @@ const Arrow = () => (
 export function StoryBanner() {
   return (
     <section className="hero" aria-labelledby="hero-title">
-      <div className="hero-copy">
-        <div className="hero-q hero-old">
-          <span className="eyebrow eyebrow-plain">Traditional procurement asks</span>
-          <p>Which vendor looks good now?</p>
+      <div className="hero-q hero-old">
+        <span className="eyebrow eyebrow-plain">Traditional procurement asks</span>
+        <div className="hero-q-body">
+          <span className="hero-q-icon" aria-hidden="true">
+            <Icon name="barChart" size={20} />
+          </span>
+          <div>
+            <p className="hero-q-title">Which vendor looks good now?</p>
+            <p className="hero-q-sub">Based only on current KPIs and quoted terms.</p>
+          </div>
         </div>
-        <div className="hero-q hero-new">
-          <span className="eyebrow eyebrow-memory">VendorPulse asks</span>
-          <h2 id="hero-title">What happened the last time we worked with this vendor?</h2>
+      </div>
+      <span className="hero-arrow" aria-hidden="true">
+        <Icon name="arrowRight" size={16} />
+      </span>
+      <div className="hero-q hero-new">
+        <span className="eyebrow eyebrow-purple">
+          <Icon name="plus" size={12} /> VendorPulse asks
+        </span>
+        <div className="hero-q-body">
+          <span className="hero-q-icon" aria-hidden="true">
+            <Icon name="memory" size={22} />
+          </span>
+          <div>
+            <h2 id="hero-title" className="hero-q-title">
+              What happened the last time we worked with this vendor?
+            </h2>
+            <p className="hero-q-sub">Combines current data with organizational memory from past orders.</p>
+          </div>
         </div>
       </div>
 
       <div className="hero-flow" role="img" aria-label="Current data plus organizational memory leads to a context-aware recommendation, then a human decision, then new memory that feeds future evaluations.">
-        <div className="flow-inputs">
+        <div className="flow-nodes">
           <FlowNode icon="database" title="Current data" sub="Vendor KPIs" tone="data" />
           <span className="flow-plus" aria-hidden="true">+</span>
-          <FlowNode icon="memory" title="Organizational memory" sub="Recalled from Hindsight" tone="memory" />
+          <FlowNode icon="memory" title="Organizational memory" sub="Past outcomes" tone="memory" />
+          <Arrow />
+          <FlowNode icon="requests" title="Context-aware recommendation" sub="AI-assisted" tone="ai" />
+          <Arrow />
+          <FlowNode icon="user" title="Human decision" sub="Manager approves" tone="human" />
+          <Arrow />
+          <FlowNode icon="database" title="New memory" sub="Outcome retained" tone="learn" />
         </div>
-        <Arrow />
-        <FlowNode icon="sparkle" title="Context-aware recommendation" sub="AI-assisted" tone="ai" />
-        <Arrow />
-        <FlowNode icon="user" title="Human decision" sub="Manager approves" tone="human" />
-        <Arrow />
-        <FlowNode icon="history" title="New memory" sub="Outcome retained" tone="learn" />
         <p className="flow-return">
-          <Icon name="refresh" size={12} /> Every recorded outcome is retained and recalled in future evaluations
+          <Icon name="memory" size={13} /> Every recorded outcome is retained and recalled in future evaluations.
         </p>
       </div>
     </section>
